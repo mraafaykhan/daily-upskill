@@ -4,355 +4,435 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Daily Upskill</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;0,800;1,400&display=swap" rel="stylesheet">
 <style>
   :root {
     color-scheme: light;
-    --bg: #F4F6F8;
-    --surface: #FFFFFF;
-    --surface-soft: #FAFBFC;
-    --border: #E3E8ED;
-    --border-strong: #C9D2DB;
-    --text: #16212B;
-    --text-soft: #3D4B59;
-    --text-muted: #76838F;
-    --text-faint: #A2ADB8;
-    --accent: #0E7490;
-    --accent-deep: #155E75;
-    --accent-soft: #E0F2F7;
-    --calm: #4C7A6E;
-    --calm-soft: #E7F0ED;
-    --serif: Georgia, "Iowan Old Style", Charter, serif;
-    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-    --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+    /* soft stoic palette — stone, sage, clay, parchment */
+    --bg: #EDE8DF;
+    --surface: #F6F2EA;
+    --surface-deep: #E5DFD3;
+    --ink: #2E2C27;
+    --ink-soft: #555147;
+    --ink-muted: #837D6F;
+    --ink-faint: #A39C8C;
+    --sage: #6F8174;
+    --sage-soft: #DCE3DC;
+    --clay: #A86B52;
+    --clay-soft: #EADDD2;
+    --slate: #6E7E8D;
+    --slate-soft: #DEE3E7;
+    --gold: #9A7B3F;
+    --gold-soft: #EAE0C8;
+    --border: #CFC7B6;
+    --border-strong: #9B9484;
+    --shadow: rgba(46, 44, 39, 0.14);
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
   body {
-    font-family: var(--sans);
-    color: var(--text);
+    font-family: var(--mono);
+    color: var(--ink);
     background: var(--bg);
-    line-height: 1.55;
-    font-size: 14.5px;
+    /* subtle paper grain */
+    background-image: radial-gradient(rgba(46,44,39,0.025) 1px, transparent 1px);
+    background-size: 4px 4px;
+    line-height: 1.65;
+    font-size: 14px;
     -webkit-font-smoothing: antialiased;
   }
-  .wrap { max-width: 1000px; margin: 0 auto; padding: 34px 26px 80px; }
+  ::selection { background: var(--gold-soft); }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 40px 24px 90px; }
 
-  header.top {
-    display: flex; justify-content: space-between; align-items: flex-end;
-    gap: 20px; flex-wrap: wrap;
-    margin-bottom: 30px; padding-bottom: 20px;
-    border-bottom: 1px solid var(--border);
+  a { color: var(--clay); }
+  a:hover { color: var(--ink); }
+
+  /* ===== Retro primitives ===== */
+  .rule { border: none; border-top: 2px solid var(--border-strong); margin: 0; }
+  .label {
+    font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.18em;
+    font-weight: 700; color: var(--ink-muted);
   }
-  .eyebrow {
-    font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em;
-    color: var(--accent); font-weight: 600; margin-bottom: 8px;
+  .card {
+    background: var(--surface);
+    border: 2px solid var(--border-strong);
+    box-shadow: 5px 5px 0 var(--shadow);
+  }
+
+  /* ===== Header ===== */
+  header.top { margin-bottom: 14px; }
+  .masthead {
+    display: flex; justify-content: space-between; align-items: baseline;
+    gap: 14px; flex-wrap: wrap; margin-bottom: 16px;
   }
   h1.brand {
-    font-family: var(--serif); font-size: 32px; font-weight: 400;
-    margin: 0 0 6px; letter-spacing: -0.01em;
+    font-size: 27px; font-weight: 800; letter-spacing: -0.02em;
+    margin: 0; text-transform: uppercase;
   }
-  .subtitle { color: var(--text-muted); font-size: 13.5px; font-variant-numeric: tabular-nums; }
-  .subtitle .dot { margin: 0 8px; color: var(--text-faint); }
+  h1.brand .slash { color: var(--clay); }
+  h1.brand .thin { font-weight: 400; color: var(--ink-soft); }
   .portfolio-link {
-    font-size: 12.5px; color: var(--text-muted); text-decoration: none;
-    border: 1px solid var(--border); border-radius: 100px; padding: 5px 14px;
-    transition: all .15s ease; white-space: nowrap;
+    font-size: 12px; color: var(--ink-soft); text-decoration: none;
+    border-bottom: 2px solid var(--border-strong); padding-bottom: 1px;
   }
-  .portfolio-link:hover { color: var(--accent); border-color: var(--accent); }
+  .portfolio-link:hover { color: var(--clay); border-color: var(--clay); }
 
-  section { margin-top: 42px; }
-  h2 { font-family: var(--serif); font-size: 19px; font-weight: 400; margin: 0 0 4px; }
-  .section-meta { color: var(--text-muted); font-size: 12.5px; margin-bottom: 16px; }
-  .section-head {
-    display: flex; justify-content: space-between; align-items: baseline;
-    margin-bottom: 16px; gap: 16px; flex-wrap: wrap;
+  .meta-strip {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    border: 2px solid var(--border-strong); background: var(--surface);
   }
-  .section-head h2 { margin-bottom: 0; }
-  .progress { font-size: 12.5px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .meta-cell { padding: 9px 14px 10px; border-right: 2px solid var(--border-strong); }
+  .meta-cell:last-child { border-right: none; }
+  .meta-cell .k { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.16em; color: var(--ink-muted); font-weight: 700; display: block; }
+  .meta-cell .v { font-size: 13px; font-weight: 500; color: var(--ink); font-variant-numeric: tabular-nums; }
+  @media (max-width: 620px) {
+    .meta-strip { grid-template-columns: repeat(2, 1fr); }
+    .meta-cell:nth-child(2) { border-right: none; }
+    .meta-cell:nth-child(1), .meta-cell:nth-child(2) { border-bottom: 2px solid var(--border-strong); }
+  }
 
-  /* ---- Mental reset row ---- */
-  .reset-row { display: grid; grid-template-columns: 340px 1fr; gap: 16px; margin-top: 28px; }
-  @media (max-width: 760px) { .reset-row { grid-template-columns: 1fr; } }
+  /* ===== Progress bar ===== */
+  .progress-line {
+    margin: 14px 0 0; font-size: 13px; color: var(--ink-soft);
+    font-variant-numeric: tabular-nums; letter-spacing: 0.02em;
+  }
+  .progress-line .blocks { color: var(--sage); letter-spacing: -0.05em; }
+  .progress-line .blocks .empty { color: var(--border); }
 
-  .breath-card {
-    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
-    padding: 22px; display: flex; flex-direction: column; align-items: center; text-align: center;
+  /* ===== Section headers ===== */
+  section { margin-top: 46px; }
+  .sec-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 6px; }
+  .sec-num {
+    font-size: 12px; font-weight: 800; color: var(--surface);
+    background: var(--ink); padding: 2px 8px; letter-spacing: 0.1em;
   }
-  .breath-card h3, .stoic-card h3 {
-    font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em;
-    color: var(--calm); font-weight: 600; margin: 0 0 14px; font-family: var(--sans);
+  h2 { font-size: 15px; font-weight: 700; margin: 0; text-transform: uppercase; letter-spacing: 0.12em; }
+  .sec-sub { font-size: 12px; color: var(--ink-muted); margin: 4px 0 18px; }
+
+  /* ===== HERO — the one thing ===== */
+  .hero { padding: 0; overflow: hidden; }
+  .hero-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--ink); color: var(--surface); padding: 7px 18px;
+    font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 700;
+    gap: 10px; flex-wrap: wrap;
   }
-  .breath-stage { position: relative; width: 170px; height: 170px; margin: 6px 0 14px; }
-  .breath-ring {
-    position: absolute; inset: 0; border-radius: 50%;
-    border: 1.5px dashed var(--border-strong);
+  .hero-bar .blink { animation: blink 1.2s steps(2, start) infinite; }
+  @keyframes blink { to { visibility: hidden; } }
+  .hero-body { padding: 24px 26px 26px; }
+  .hero-source { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--clay); font-weight: 700; margin-bottom: 10px; }
+  .hero-title { font-size: 23px; font-weight: 700; line-height: 1.3; margin: 0 0 14px; letter-spacing: -0.015em; }
+  .hero-title a { color: var(--ink); text-decoration: none; border-bottom: 3px solid var(--gold-soft); }
+  .hero-title a:hover { border-color: var(--clay); color: var(--clay); }
+  .hero-summary { font-size: 13.5px; color: var(--ink-soft); margin: 0 0 20px; max-width: 64ch; }
+  .hero-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .btn {
+    font-family: var(--mono); font-size: 12.5px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    border: 2px solid var(--ink); background: var(--surface); color: var(--ink);
+    padding: 9px 18px; cursor: pointer;
+    box-shadow: 3px 3px 0 var(--shadow);
+    transition: transform .08s ease, box-shadow .08s ease;
   }
+  .btn:hover { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 var(--shadow); }
+  .btn:active { transform: translate(2px,2px); box-shadow: 0 0 0 var(--shadow); }
+  .btn.fill { background: var(--sage); border-color: var(--sage); color: #fff; }
+  .btn.ghost { border-color: var(--border-strong); color: var(--ink-soft); box-shadow: none; }
+  .hero-open {
+    font-size: 12.5px; color: var(--ink-soft);
+  }
+  .hero-done { padding: 34px 26px; text-align: center; }
+  .hero-done .big { font-size: 21px; font-weight: 700; margin-bottom: 10px; }
+  .hero-done .quote { font-size: 13px; color: var(--ink-muted); font-style: italic; max-width: 52ch; margin: 0 auto; }
+
+  /* ===== Tags ===== */
+  .tag {
+    display: inline-block; font-size: 10px; font-weight: 700;
+    padding: 1px 8px; letter-spacing: 0.08em; text-transform: uppercase;
+    border: 1.5px solid currentColor; border-radius: 2px;
+  }
+  .tag.fintech { color: #5F7050; background: var(--sage-soft); }
+  .tag.architecture { color: #54677A; background: var(--slate-soft); }
+  .tag.kubernetes { color: #46708A; background: #DCE6EC; }
+  .tag.philosophy { color: #8A5B40; background: var(--clay-soft); }
+  .tag.workflow { color: #86692E; background: var(--gold-soft); }
+
+  /* ===== Queue rows (progressive disclosure) ===== */
+  .queue { display: grid; gap: 0; border: 2px solid var(--border-strong); background: var(--surface); box-shadow: 5px 5px 0 var(--shadow); }
+  details.qrow { border-bottom: 2px solid var(--border); }
+  details.qrow:last-child { border-bottom: none; }
+  details.qrow summary {
+    list-style: none; cursor: pointer; display: flex; align-items: center;
+    gap: 13px; padding: 13px 16px; user-select: none;
+  }
+  details.qrow summary::-webkit-details-marker { display: none; }
+  details.qrow summary:hover { background: var(--surface-deep); }
+  .q-idx { font-size: 11px; color: var(--ink-faint); font-weight: 700; min-width: 24px; }
+  .q-title { flex: 1; font-size: 13.5px; font-weight: 500; line-height: 1.4; min-width: 0; }
+  .q-min { font-size: 11px; color: var(--ink-muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .q-caret { color: var(--ink-faint); font-size: 11px; transition: transform .15s ease; }
+  details.qrow[open] .q-caret { transform: rotate(90deg); }
+  .q-body { padding: 2px 16px 16px 53px; }
+  .q-source { font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--clay); font-weight: 700; margin-bottom: 6px; }
+  .q-summary { font-size: 13px; color: var(--ink-soft); margin: 0 0 12px; max-width: 62ch; }
+  .q-actions { display: flex; gap: 12px; align-items: center; }
+  .q-link { font-size: 12px; font-weight: 700; }
+  details.qrow.read summary { opacity: 0.5; }
+  details.qrow.read .q-title { text-decoration: line-through; text-decoration-color: var(--ink-faint); text-decoration-thickness: 1.5px; }
+
+  .check {
+    appearance: none; -webkit-appearance: none;
+    width: 19px; height: 19px; border: 2px solid var(--border-strong);
+    margin: 0; cursor: pointer; flex-shrink: 0;
+    background: var(--surface); position: relative; border-radius: 2px;
+  }
+  .check:hover { border-color: var(--sage); }
+  .check:checked { background: var(--sage); border-color: var(--sage); }
+  .check:checked::after {
+    content: ""; position: absolute; left: 4px; top: 0;
+    width: 6px; height: 10px; border: solid #fff; border-width: 0 2.5px 2.5px 0;
+    transform: rotate(45deg);
+  }
+  .check:focus-visible, .btn:focus-visible, summary:focus-visible {
+    outline: 2px dashed var(--clay); outline-offset: 2px;
+  }
+
+  /* ===== Reset station ===== */
+  .reset-row { display: grid; grid-template-columns: 330px 1fr; gap: 18px; }
+  @media (max-width: 740px) { .reset-row { grid-template-columns: 1fr; } }
+  .breath-card { padding: 20px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+  .breath-stage { position: relative; width: 168px; height: 168px; margin: 10px 0 16px; }
+  .breath-ring { position: absolute; inset: 0; border-radius: 50%; border: 2px dashed var(--border-strong); }
   .breath-circle {
-    position: absolute; inset: 25px; border-radius: 50%;
-    background: radial-gradient(circle at 35% 30%, #9EC9BF, var(--calm));
-    transform: scale(0.62);
+    position: absolute; inset: 24px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #97AB9B, var(--sage));
+    transform: scale(0.6);
     transition: transform 4s cubic-bezier(0.4, 0, 0.4, 1);
-    box-shadow: 0 4px 24px rgba(76, 122, 110, 0.35);
+    box-shadow: 0 4px 20px rgba(111, 129, 116, 0.45);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .breath-circle { transition: none !important; }
+    .hero-bar .blink { animation: none; }
   }
   .breath-label {
     position: absolute; inset: 0; display: flex; flex-direction: column;
     align-items: center; justify-content: center; color: #fff;
-    font-weight: 600; font-size: 15px; letter-spacing: 0.04em; pointer-events: none;
-    text-shadow: 0 1px 4px rgba(0,0,0,0.25);
+    pointer-events: none; text-shadow: 0 1px 4px rgba(0,0,0,0.3);
   }
-  .breath-count { font-size: 26px; font-variant-numeric: tabular-nums; line-height: 1.1; }
-  .breath-phase { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.9; }
+  .breath-count { font-size: 28px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .breath-phase { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.2em; font-weight: 700; opacity: 0.95; }
   .breath-controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
-  .btn {
-    font-family: var(--sans); font-size: 12.5px; font-weight: 600;
-    border-radius: 100px; padding: 7px 18px; cursor: pointer;
-    border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-soft);
-    transition: all .15s ease;
-  }
-  .btn:hover { border-color: var(--calm); color: var(--calm); }
-  .btn.primary { background: var(--calm); border-color: var(--calm); color: #fff; }
-  .btn.primary:hover { background: #3E665B; }
-  .btn.mode.active { background: var(--calm-soft); border-color: var(--calm); color: var(--calm); }
-  .breath-hint { font-size: 12px; color: var(--text-muted); margin-top: 12px; max-width: 250px; }
-  .breath-sessions { font-size: 11.5px; color: var(--text-faint); margin-top: 6px; font-variant-numeric: tabular-nums; }
+  .btn.mode { font-size: 11px; padding: 6px 12px; box-shadow: none; border-color: var(--border-strong); color: var(--ink-soft); }
+  .btn.mode.active { background: var(--ink); border-color: var(--ink); color: var(--surface); }
+  .breath-hint { font-size: 11.5px; color: var(--ink-muted); margin-top: 14px; max-width: 250px; line-height: 1.55; }
+  .breath-sessions { font-size: 11px; color: var(--ink-faint); margin-top: 8px; font-variant-numeric: tabular-nums; }
 
-  .stoic-card {
-    background: linear-gradient(135deg, #FBFCFC, #F2F6F5);
-    border: 1px solid var(--border); border-radius: 14px;
-    padding: 26px 30px; display: flex; flex-direction: column; justify-content: center;
-  }
+  .stoic-card { padding: 26px 28px; display: flex; flex-direction: column; justify-content: center; background: var(--surface); }
+  .stoic-head { margin-bottom: 16px; }
   blockquote.stoic-quote {
-    font-family: var(--serif); font-size: 19px; line-height: 1.55;
-    color: var(--text-soft); margin: 0 0 14px; font-style: italic;
+    font-size: 16.5px; line-height: 1.6; color: var(--ink);
+    margin: 0 0 14px; font-style: italic; font-weight: 400;
+    border-left: 3px solid var(--clay); padding-left: 16px;
   }
-  .stoic-author { font-size: 12.5px; color: var(--text-muted); letter-spacing: 0.04em; }
+  .stoic-author { font-size: 11.5px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700; }
   .stoic-prompt {
-    margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border);
-    font-size: 13px; color: var(--text-soft);
+    margin-top: 18px; padding: 12px 14px; font-size: 12.5px; color: var(--ink-soft);
+    background: var(--clay-soft); border: 1.5px dashed var(--clay);
   }
-  .stoic-prompt strong { color: var(--calm); font-weight: 600; }
+  .stoic-prompt strong { color: var(--clay); text-transform: uppercase; font-size: 10.5px; letter-spacing: 0.12em; }
 
-  /* ---- Articles ---- */
-  .articles { display: grid; gap: 13px; }
-  .article {
-    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
-    padding: 17px 19px; display: flex; gap: 15px; align-items: flex-start;
-    transition: border-color .15s ease, opacity .2s ease;
+  /* ===== Archive (collapsed by default) ===== */
+  details.archive > summary {
+    list-style: none; cursor: pointer; user-select: none;
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 18px; border: 2px solid var(--border-strong);
+    background: var(--surface); box-shadow: 5px 5px 0 var(--shadow);
+    font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 0.1em;
   }
-  .article:hover { border-color: var(--border-strong); }
-  .article.read { opacity: 0.62; background: var(--surface-soft); }
-  .article.read .article-title a { color: var(--text-muted); }
-
-  .check {
-    appearance: none; -webkit-appearance: none;
-    width: 20px; height: 20px; border: 1.5px solid var(--border-strong);
-    border-radius: 6px; margin: 1px 0 0; cursor: pointer; flex-shrink: 0;
-    background: var(--surface); position: relative; transition: all .15s ease;
-  }
-  .check:hover { border-color: var(--accent); }
-  .check:checked { background: var(--accent); border-color: var(--accent); }
-  .check:checked::after {
-    content: ""; position: absolute; left: 5px; top: 1px;
-    width: 6px; height: 11px; border: solid #fff; border-width: 0 2px 2px 0;
-    transform: rotate(45deg);
-  }
-
-  .article-body { flex: 1; min-width: 0; }
-  .article-source {
-    font-size: 11px; color: var(--text-muted); text-transform: uppercase;
-    letter-spacing: 0.07em; margin-bottom: 5px; font-weight: 500;
-  }
-  .article-title { font-family: var(--serif); font-size: 17.5px; line-height: 1.35; margin: 0 0 7px; }
-  .article-title a { color: var(--text); text-decoration: none; }
-  .article-title a:hover {
-    color: var(--accent); text-decoration: underline;
-    text-decoration-thickness: 1px; text-underline-offset: 3px;
-  }
-  .article-summary { color: var(--text-soft); font-size: 13.5px; margin: 0; line-height: 1.55; }
-
-  .tag {
-    display: inline-block; font-size: 10.5px; padding: 2px 9px; border-radius: 11px;
-    margin-left: 8px; vertical-align: 2px; font-weight: 500; letter-spacing: 0.03em;
-    text-transform: lowercase;
-  }
-  .tag.fintech { background: #E3EBE0; color: #4A6240; }
-  .tag.architecture { background: #E2E7F2; color: #41527E; }
-  .tag.kubernetes { background: #DFEDF2; color: #2D6377; }
-  .tag.philosophy { background: #EDE4E0; color: #79543F; }
-  .tag.workflow { background: #EEE8D9; color: #756030; }
-
-  .streak {
-    display: inline-flex; align-items: center; gap: 6px;
-    background: var(--accent-soft); border: 1px solid #BBDDE7; border-radius: 100px;
-    padding: 4px 12px 4px 10px; font-size: 12px; color: var(--accent-deep); font-weight: 500;
-  }
-
-  /* ---- Tiles ---- */
-  .group-label {
-    font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
-    color: var(--text-muted); font-weight: 600; margin: 20px 0 10px;
-  }
-  .group-label:first-of-type { margin-top: 0; }
-  .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  details.archive > summary::-webkit-details-marker { display: none; }
+  details.archive > summary:hover { background: var(--surface-deep); }
+  details.archive > summary .q-caret { margin-left: auto; }
+  details.archive[open] > summary .q-caret { transform: rotate(90deg); }
+  details.archive .archive-body { padding: 22px 4px 4px; }
+  .group-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--ink-muted); font-weight: 700; margin: 20px 0 10px; }
+  .group-label:first-child { margin-top: 0; }
+  .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
   .tile {
-    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
-    padding: 14px 16px; text-decoration: none; color: inherit; display: block;
-    transition: all .15s ease;
+    background: var(--surface); border: 2px solid var(--border);
+    padding: 13px 15px; text-decoration: none; color: inherit; display: block;
+    transition: border-color .12s ease;
   }
-  .tile:hover { border-color: var(--accent); transform: translateY(-1px); }
-  .tile-name { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
-  .tile-desc { font-size: 12.5px; color: var(--text-soft); line-height: 1.45; }
-  .tile-path { font-family: var(--mono); font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+  .tile:hover { border-color: var(--clay); }
+  .tile-name { font-weight: 700; font-size: 12.5px; margin-bottom: 4px; }
+  .tile-name::before { content: "▸ "; color: var(--clay); }
+  .tile-desc { font-size: 11.5px; color: var(--ink-soft); line-height: 1.5; }
 
+  /* ===== Footer ===== */
   footer.bot {
-    margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--border);
-    color: var(--text-muted); font-size: 12px; text-align: center;
-    font-style: italic; font-family: var(--serif);
+    margin-top: 64px; padding-top: 18px; border-top: 2px solid var(--border-strong);
+    color: var(--ink-muted); font-size: 11px; text-align: center; letter-spacing: 0.04em;
   }
+  footer.bot .ascii { color: var(--ink-faint); display: block; margin-bottom: 8px; letter-spacing: 0; }
 </style>
 </head>
 <body>
 <div class="wrap">
 
 <header class="top">
-  <div>
-    <div class="eyebrow">Fintech · Architecture · Kubernetes · Mind</div>
-    <h1 class="brand">Daily Upskill</h1>
-    <div class="subtitle">
-      <span id="today-date"></span>
-      <span class="dot">·</span>
-      <span id="streak-line"></span>
-    </div>
+  <div class="masthead">
+    <h1 class="brand">Daily<span class="slash">//</span>Upskill <span class="thin">v2</span></h1>
+    <a class="portfolio-link" href="https://mraafaykhan.github.io" target="_blank" rel="noopener">mraafaykhan.github.io</a>
   </div>
-  <a class="portfolio-link" href="https://mraafaykhan.github.io" target="_blank" rel="noopener">mraafaykhan.github.io ↗</a>
+  <div class="meta-strip">
+    <div class="meta-cell"><span class="k">Date</span><span class="v" id="today-date">—</span></div>
+    <div class="meta-cell"><span class="k">Streak</span><span class="v" id="streak-line">—</span></div>
+    <div class="meta-cell"><span class="k">Queue</span><span class="v" id="queue-count">—</span></div>
+    <div class="meta-cell"><span class="k">Resets</span><span class="v" id="resets-count">0</span></div>
+  </div>
+  <div class="progress-line" id="progress-line"></div>
 </header>
 
-<!-- Mental reset -->
-<div class="reset-row">
-  <div class="breath-card">
-    <h3>Mental reset</h3>
-    <div class="breath-stage">
-      <div class="breath-ring"></div>
-      <div class="breath-circle" id="breath-circle"></div>
-      <div class="breath-label">
-        <div class="breath-count" id="breath-count">—</div>
-        <div class="breath-phase" id="breath-phase">ready</div>
+<!-- ============ 01 · NOW ============ -->
+<section id="now">
+  <div class="sec-head"><span class="sec-num">01</span><h2>Now</h2></div>
+  <div class="sec-sub">One thing. Everything else can wait.</div>
+  <div class="card hero" id="hero"></div>
+</section>
+
+<!-- ============ 02 · UP NEXT ============ -->
+<section id="next">
+  <div class="sec-head"><span class="sec-num">02</span><h2>Up next</h2></div>
+  <div class="sec-sub">Tap a row to see why it's worth your time. Check it off when read.</div>
+  <div class="queue" id="queue"></div>
+</section>
+
+<!-- ============ 03 · RESET ============ -->
+<section id="reset">
+  <div class="sec-head"><span class="sec-num">03</span><h2>Reset station</h2></div>
+  <div class="sec-sub">Brain fog between articles? Ninety seconds here beats thirty minutes of doomscrolling.</div>
+  <div class="reset-row">
+    <div class="card breath-card">
+      <span class="label">Breathe</span>
+      <div class="breath-stage">
+        <div class="breath-ring"></div>
+        <div class="breath-circle" id="breath-circle"></div>
+        <div class="breath-label">
+          <div class="breath-count" id="breath-count">—</div>
+          <div class="breath-phase" id="breath-phase">ready</div>
+        </div>
+      </div>
+      <div class="breath-controls">
+        <button class="btn fill" id="breath-toggle">Start</button>
+        <button class="btn mode active" id="mode-box" title="Inhale 4 · hold 4 · exhale 4 · hold 4">Box 4·4·4·4</button>
+        <button class="btn mode" id="mode-478" title="Inhale 4 · hold 7 · exhale 8">4·7·8</button>
+      </div>
+      <div class="breath-hint" id="breath-hint">Box breathing: four counts per side. Three loops settle a racing mind — the same drill pilots run before landing.</div>
+      <div class="breath-sessions" id="breath-sessions"></div>
+    </div>
+    <div class="card stoic-card">
+      <div class="stoic-head"><span class="label">Stoic frame for today</span></div>
+      <blockquote class="stoic-quote" id="stoic-quote"></blockquote>
+      <div class="stoic-author" id="stoic-author"></div>
+      <div class="stoic-prompt"><strong>Practice ›</strong> <span id="stoic-practice"></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 04 · MIND & WORKFLOW ============ -->
+<section id="growth-section">
+  <div class="sec-head"><span class="sec-num">04</span><h2>Mind &amp; Workflow</h2></div>
+  <div class="sec-sub">One for the head, one for the toolbelt. Rotates daily.</div>
+  <div class="queue" id="growth"></div>
+</section>
+
+<!-- ============ 05 · ARCHIVE ============ -->
+<section id="deeper">
+  <div class="sec-head"><span class="sec-num">05</span><h2>Go deeper</h2></div>
+  <div class="sec-sub">Standing references. Collapsed so they don't shout — open when you're hunting.</div>
+
+  <details class="archive">
+    <summary>Fintech engineering <span class="q-caret">▶</span></summary>
+    <div class="archive-body">
+      <div class="grid">
+        <a class="tile" href="https://stripe.com/blog/engineering" target="_blank" rel="noopener">
+          <div class="tile-name">Stripe Engineering</div>
+          <div class="tile-desc">Idempotency, ledgers, rate limiters, API design. The payments canon — when in doubt, see how Stripe did it.</div>
+        </a>
+        <a class="tile" href="https://www.moderntreasury.com/journal" target="_blank" rel="noopener">
+          <div class="tile-name">Modern Treasury Journal</div>
+          <div class="tile-desc">The best public writing on ledger design. Start with the "How to Scale a Ledger" series, parts I–VI.</div>
+        </a>
+        <a class="tile" href="https://github.com/moov-io/awesome-fintech" target="_blank" rel="noopener">
+          <div class="tile-name">awesome-fintech</div>
+          <div class="tile-desc">OSS fintech libraries curated by the Moov payment-infra team. High bar for inclusion.</div>
+        </a>
+        <a class="tile" href="https://newsletter.pragmaticengineer.com/" target="_blank" rel="noopener">
+          <div class="tile-name">The Pragmatic Engineer</div>
+          <div class="tile-desc">How real engineering orgs actually work, with frequent fintech deep dives.</div>
+        </a>
       </div>
     </div>
-    <div class="breath-controls">
-      <button class="btn primary" id="breath-toggle">Start</button>
-      <button class="btn mode active" id="mode-box" title="Inhale 4 · hold 4 · exhale 4 · hold 4">Box 4·4·4·4</button>
-      <button class="btn mode" id="mode-478" title="Inhale 4 · hold 7 · exhale 8">4·7·8</button>
+  </details>
+
+  <br>
+
+  <details class="archive">
+    <summary>Software design &amp; architecture <span class="q-caret">▶</span></summary>
+    <div class="archive-body">
+      <div class="grid">
+        <a class="tile" href="https://martinfowler.com/" target="_blank" rel="noopener">
+          <div class="tile-name">martinfowler.com</div>
+          <div class="tile-desc">Patterns, refactoring, evolutionary architecture. One catalog entry a week compounds fast.</div>
+        </a>
+        <a class="tile" href="https://www.infoq.com/architecture-design/" target="_blank" rel="noopener">
+          <div class="tile-name">InfoQ Architecture</div>
+          <div class="tile-desc">Trend reports and QCon talks — what practitioners are actually adopting, with the hype filtered out.</div>
+        </a>
+        <a class="tile" href="https://github.com/donnemartin/system-design-primer" target="_blank" rel="noopener">
+          <div class="tile-name">system-design-primer</div>
+          <div class="tile-desc">The reference repo for system-design fundamentals, with worked solutions.</div>
+        </a>
+        <a class="tile" href="https://github.com/papers-we-love/papers-we-love" target="_blank" rel="noopener">
+          <div class="tile-name">papers-we-love</div>
+          <div class="tile-desc">Community-curated CS papers. Distributed systems and databases sections are gold.</div>
+        </a>
+      </div>
     </div>
-    <div class="breath-hint" id="breath-hint">Box breathing — four counts each side. Three cycles is enough to lower your heart rate between deploys.</div>
-    <div class="breath-sessions" id="breath-sessions"></div>
-  </div>
+  </details>
 
-  <div class="stoic-card">
-    <h3>Stoic frame for today</h3>
-    <blockquote class="stoic-quote" id="stoic-quote"></blockquote>
-    <div class="stoic-author" id="stoic-author"></div>
-    <div class="stoic-prompt"><strong>Practice:</strong> <span id="stoic-practice"></span></div>
-  </div>
-</div>
+  <br>
 
-<section>
-  <div class="section-head">
-    <div>
-      <h2>Today's reading</h2>
-      <div class="section-meta" id="time-estimate"></div>
+  <details class="archive">
+    <summary>Kubernetes <span class="q-caret">▶</span></summary>
+    <div class="archive-body">
+      <div class="grid">
+        <a class="tile" href="https://kubernetes.io/docs/concepts/" target="_blank" rel="noopener">
+          <div class="tile-name">Kubernetes Concepts</div>
+          <div class="tile-desc">The official conceptual docs — better written than most books. Start at Cluster Architecture.</div>
+        </a>
+        <a class="tile" href="https://github.com/kelseyhightower/kubernetes-the-hard-way" target="_blank" rel="noopener">
+          <div class="tile-name">Kubernetes the Hard Way</div>
+          <div class="tile-desc">Bootstrap a cluster by hand, no scripts. The fastest route to actually understanding the control plane.</div>
+        </a>
+        <a class="tile" href="https://learnk8s.io/archive" target="_blank" rel="noopener">
+          <div class="tile-name">Learnk8s Archive</div>
+          <div class="tile-desc">Long-form, diagram-heavy tutorials on networking, autoscaling, and resource limits.</div>
+        </a>
+        <a class="tile" href="https://kubernetes.io/blog/" target="_blank" rel="noopener">
+          <div class="tile-name">Kubernetes Blog</div>
+          <div class="tile-desc">Release deep-dives and SIG write-ups, straight from upstream.</div>
+        </a>
+      </div>
     </div>
-    <div class="progress" id="today-progress"></div>
-  </div>
-  <div class="articles" id="articles"></div>
-</section>
-
-<section>
-  <div class="section-head">
-    <div>
-      <h2>Mind &amp; workflow</h2>
-      <div class="section-meta">One for the head, one for the toolbelt · rotates daily</div>
-    </div>
-    <div class="progress" id="growth-progress"></div>
-  </div>
-  <div class="articles" id="growth"></div>
-</section>
-
-<section>
-  <div class="section-head">
-    <div>
-      <h2>Go deeper</h2>
-      <div class="section-meta">Standing references — no rotation, always worth a visit</div>
-    </div>
-  </div>
-
-  <div class="group-label">Fintech engineering</div>
-  <div class="grid">
-    <a class="tile" href="https://stripe.com/blog/engineering" target="_blank" rel="noopener">
-      <div class="tile-name">Stripe Engineering</div>
-      <div class="tile-desc">Idempotency, ledgers, API design, rate limiters — the canon for payments infrastructure.</div>
-    </a>
-    <a class="tile" href="https://www.moderntreasury.com/journal" target="_blank" rel="noopener">
-      <div class="tile-name">Modern Treasury Journal</div>
-      <div class="tile-desc">The best public writing on ledger design: the multi-part "How to Scale a Ledger" series lives here.</div>
-    </a>
-    <a class="tile" href="https://github.com/moov-io/awesome-fintech" target="_blank" rel="noopener">
-      <div class="tile-name">awesome-fintech (Moov)</div>
-      <div class="tile-desc">Curated OSS fintech libraries, maintained by payment-infrastructure engineers.</div>
-      <div class="tile-path">moov-io/awesome-fintech</div>
-    </a>
-    <a class="tile" href="https://newsletter.pragmaticengineer.com/" target="_blank" rel="noopener">
-      <div class="tile-name">The Pragmatic Engineer</div>
-      <div class="tile-desc">Deep dives on how real engineering orgs work — frequent payments and fintech coverage.</div>
-    </a>
-  </div>
-
-  <div class="group-label">Software design &amp; architecture</div>
-  <div class="grid">
-    <a class="tile" href="https://martinfowler.com/" target="_blank" rel="noopener">
-      <div class="tile-name">martinfowler.com</div>
-      <div class="tile-desc">Patterns, refactoring, evolutionary architecture. Read one entry from the catalog per week.</div>
-    </a>
-    <a class="tile" href="https://www.infoq.com/architecture-design/" target="_blank" rel="noopener">
-      <div class="tile-name">InfoQ Architecture &amp; Design</div>
-      <div class="tile-desc">Trend reports, QCon talks, and practitioner write-ups on real architecture decisions.</div>
-    </a>
-    <a class="tile" href="https://github.com/donnemartin/system-design-primer" target="_blank" rel="noopener">
-      <div class="tile-name">system-design-primer</div>
-      <div class="tile-desc">The reference repo for system-design fundamentals, with worked solutions.</div>
-      <div class="tile-path">donnemartin/system-design-primer</div>
-    </a>
-    <a class="tile" href="https://github.com/papers-we-love/papers-we-love" target="_blank" rel="noopener">
-      <div class="tile-name">papers-we-love</div>
-      <div class="tile-desc">Community-curated CS papers — distributed systems and databases sections are gold.</div>
-      <div class="tile-path">papers-we-love/papers-we-love</div>
-    </a>
-  </div>
-
-  <div class="group-label">Kubernetes</div>
-  <div class="grid">
-    <a class="tile" href="https://kubernetes.io/docs/concepts/" target="_blank" rel="noopener">
-      <div class="tile-name">Kubernetes Concepts</div>
-      <div class="tile-desc">The official conceptual docs — better written than most books. Start at Cluster Architecture.</div>
-    </a>
-    <a class="tile" href="https://github.com/kelseyhightower/kubernetes-the-hard-way" target="_blank" rel="noopener">
-      <div class="tile-name">Kubernetes the Hard Way</div>
-      <div class="tile-desc">Bootstrap a cluster by hand, no scripts. The fastest way to actually understand the control plane.</div>
-      <div class="tile-path">kelseyhightower/kubernetes-the-hard-way</div>
-    </a>
-    <a class="tile" href="https://learnk8s.io/archive" target="_blank" rel="noopener">
-      <div class="tile-name">Learnk8s Archive</div>
-      <div class="tile-desc">Long-form, diagram-heavy tutorials on networking, autoscaling, and resource limits.</div>
-    </a>
-    <a class="tile" href="https://kubernetes.io/blog/" target="_blank" rel="noopener">
-      <div class="tile-name">Kubernetes Blog</div>
-      <div class="tile-desc">Release deep-dives and SIG write-ups, straight from upstream.</div>
-    </a>
-  </div>
+  </details>
 </section>
 
 <footer class="bot">
-  Refreshed daily at 7:00 AM Gulf time · Reading state and breath sessions stored locally
+  <span class="ascii">╭──────────────────────────────╮<br>│ ship the day, then the year. │<br>╰──────────────────────────────╯</span>
+  refreshed daily · 7:00 gulf time · progress lives in your browser
 </footer>
 
 </div>
@@ -372,7 +452,7 @@ var TODAYS_ARTICLES = [
     source: "Stripe Engineering",
     url: "https://stripe.com/blog/idempotency",
     tag: "fintech",
-    summary: "The canonical treatment of idempotency keys: why networks fail mid-request, how Stripe correlates client-generated keys with server state, and the 24-hour retention trade-off. If you build or call money-moving endpoints at Ziina, this is the pattern every retry path should be measured against."
+    summary: "Networks fail mid-request; money must not move twice. The canonical write-up of idempotency keys: client-generated IDs, server-side correlation, and the 24-hour retention trade-off. Every retry path you own at Ziina should be measured against this pattern."
   },
   {
     id: 'mt-ledgers-optimistic-locking',
@@ -380,7 +460,7 @@ var TODAYS_ARTICLES = [
     source: "Modern Treasury Journal",
     url: "https://www.moderntreasury.com/journal/designing-ledgers-with-optimistic-locking",
     tag: "fintech",
-    summary: "How Modern Treasury handles concurrent writes to hot ledger accounts using a lock_version column, and the alternatives they rejected. Concurrency control on balances is the hardest part of wallet engineering — this is a concrete, production-tested answer rather than theory."
+    summary: "Concurrent writes to a hot wallet balance are the hardest problem in ledger engineering. Modern Treasury shows the lock_version approach they shipped — and the alternatives they rejected, which is the more instructive half. Production-tested, not theory."
   },
   {
     id: 'infoq-architecture-trends-2025',
@@ -388,7 +468,7 @@ var TODAYS_ARTICLES = [
     source: "InfoQ",
     url: "https://www.infoq.com/articles/architecture-trends-2025/",
     tag: "architecture",
-    summary: "InfoQ's editors map what's moving from innovator to early-adopter: agentic systems, RAG as an architectural pattern, small specialized models, and decentralized decision-making. Useful as a skill-gap map — note which named patterns you couldn't whiteboard today and queue them."
+    summary: "A map of what's moving from innovator to early adopter: agentic systems, RAG as an architectural pattern, small specialized models, decentralized decision-making. Use it as a gap-finder — any named pattern you couldn't whiteboard today goes on your list."
   },
   {
     id: 'figma-k8s-migration',
@@ -396,7 +476,7 @@ var TODAYS_ARTICLES = [
     source: "Figma Engineering",
     url: "https://www.figma.com/blog/migrating-onto-kubernetes/",
     tag: "kubernetes",
-    summary: "Figma's ECS-to-EKS migration: a scaled-up 'Hello World' service to find cluster limits before committing, weighted DNS for incremental traffic shifts with fast rollback, and why StatefulSets mattered for etcd. A realistic picture of what adopting k8s costs and where it pays off."
+    summary: "Figma scaled a fake 'Hello World' service to find cluster limits before betting real traffic, then shifted over with weighted DNS and instant rollback. The most honest public account of what adopting k8s actually costs — and where it pays off."
   },
   {
     id: 'fowler-humans-agents',
@@ -404,7 +484,7 @@ var TODAYS_ARTICLES = [
     source: "martinfowler.com · March 2026",
     url: "https://martinfowler.com/articles/exploring-gen-ai/humans-and-agents.html",
     tag: "architecture",
-    summary: "Argues the right place for engineers is designing and managing the working loop around coding agents — not micromanaging output, not abdicating review. The framing of supervisory engineering and risk tiering is directly applicable to how you structure AI-assisted work on a payments codebase."
+    summary: "Where do engineers belong when agents write the code? Not micromanaging output, not abdicating review — designing the loop itself. The supervisory-engineering and risk-tiering framing maps directly onto AI-assisted work in a payments codebase."
   }
 ];
 // ARTICLES_END
@@ -421,7 +501,7 @@ var GROWTH_PICKS = [
     source: "zsombor.io",
     url: "https://zsombor.io/blog/2020/01/21/dichotomy-of-control.html",
     tag: "philosophy",
-    summary: "An engineer applies Epictetus directly to the job: outages, flaky dependencies, and review feedback sorted into what you control, what you influence, and what you must accept. Short, concrete, and a better on-call companion than most incident-management advice."
+    summary: "An engineer runs outages, slipped estimates, and promo-committee verdicts through Epictetus: what's yours to control, what isn't, and where the line actually sits. A better on-call companion than most incident-management guides."
   },
   {
     id: 'pragmatic-ai-tooling-2026',
@@ -429,7 +509,7 @@ var GROWTH_PICKS = [
     source: "The Pragmatic Engineer · March 2026",
     url: "https://newsletter.pragmaticengineer.com/p/ai-tooling-2026",
     tag: "workflow",
-    summary: "Survey of 906 engineers: 95% use AI tools weekly, 55% run agents regularly, and the tool rankings shifted sharply in eight months. Useful for benchmarking your own setup against what experienced engineers actually adopted, not what vendors are pitching."
+    summary: "906 engineers surveyed: 95% use AI weekly, 55% run agents regularly, and the tool rankings flipped inside eight months. Benchmark your own setup against what experienced engineers adopted — not what vendors are pitching."
   }
 ];
 // GROWTH_END
@@ -440,19 +520,19 @@ var TOTAL_READ_MINUTES = 75; // refreshed by scheduler
 // STOIC QUOTES — rotates by day of year, no refresh needed
 // ============================================================
 var STOIC_QUOTES = [
-  { q: "You have power over your mind — not outside events. Realize this, and you will find strength.", a: "Marcus Aurelius, Meditations", p: "Before standup, name one thing today that is outside your control. Decide to spend zero energy on it." },
-  { q: "We suffer more often in imagination than in reality.", a: "Seneca, Letters to Lucilius", p: "Notice the next time you rehearse a failure that hasn't happened — a bad review, a failed deploy. Ask: is this real yet?" },
-  { q: "It's not what happens to you, but how you react to it that matters.", a: "Epictetus, Enchiridion", p: "When something breaks today, take one breath before responding. The pause is the practice." },
-  { q: "Confine yourself to the present.", a: "Marcus Aurelius, Meditations", p: "Single-task one block of deep work today. One ticket, notifications off, until it's done or 90 minutes pass." },
-  { q: "No man is free who is not master of himself.", a: "Epictetus", p: "Pick one impulse to observe today — checking Slack, opening a new tab. Just count how often it pulls you." },
-  { q: "If it is not right, do not do it; if it is not true, do not say it.", a: "Marcus Aurelius, Meditations", p: "In code review today, say the true thing kindly — both the praise you withhold and the concern you soften." },
+  { q: "You have power over your mind — not outside events. Realize this, and you will find strength.", a: "Marcus Aurelius · Meditations", p: "Before standup, name one thing today that is outside your control. Budget zero energy for it." },
+  { q: "We suffer more often in imagination than in reality.", a: "Seneca · Letters", p: "Catch yourself rehearsing a failure that hasn't happened — a bad review, a failed deploy. Ask: is this real yet?" },
+  { q: "It's not what happens to you, but how you react to it that matters.", a: "Epictetus · Enchiridion", p: "When something breaks today, take one breath before responding. The pause is the practice." },
+  { q: "Confine yourself to the present.", a: "Marcus Aurelius · Meditations", p: "Single-task one block of deep work today. One ticket, notifications off, 90 minutes or done." },
+  { q: "No man is free who is not master of himself.", a: "Epictetus", p: "Pick one impulse to observe today — checking Slack, opening a new tab. Just count how often it pulls." },
+  { q: "If it is not right, do not do it; if it is not true, do not say it.", a: "Marcus Aurelius · Meditations", p: "In code review today, say the true thing kindly — the praise you withhold and the concern you soften." },
   { q: "Luck is what happens when preparation meets opportunity.", a: "Seneca", p: "Spend 20 minutes on the skill you'll need next quarter, not the one this sprint demands." },
-  { q: "How long are you going to wait before you demand the best for yourself?", a: "Epictetus, Discourses", p: "That improvement you keep deferring — a test, a doc, a refactor — do the first 15 minutes of it today." },
-  { q: "The impediment to action advances action. What stands in the way becomes the way.", a: "Marcus Aurelius, Meditations", p: "Take today's most annoying blocker and treat it as the curriculum: what is it teaching you?" },
-  { q: "He who fears death will never do anything worthy of a man who is alive.", a: "Seneca", p: "Ship the thing you've been polishing past the point of usefulness. Done teaches more than perfect." },
+  { q: "How long are you going to wait before you demand the best for yourself?", a: "Epictetus · Discourses", p: "That improvement you keep deferring — a test, a doc, a refactor — do the first 15 minutes of it today." },
+  { q: "The impediment to action advances action. What stands in the way becomes the way.", a: "Marcus Aurelius · Meditations", p: "Take today's most annoying blocker and treat it as the curriculum: what is it teaching you?" },
+  { q: "He who fears death will never do anything worthy of a man who is alive.", a: "Seneca", p: "Ship the thing you've been polishing past usefulness. Done teaches more than perfect." },
   { q: "Don't explain your philosophy. Embody it.", a: "Epictetus", p: "No announcements today. Let one quiet, well-made commit speak instead." },
-  { q: "Waste no more time arguing about what a good man should be. Be one.", a: "Marcus Aurelius, Meditations", p: "Skip one debate today that won't change the outcome. Spend the saved minutes on the work itself." },
-  { q: "Difficulties strengthen the mind, as labor does the body.", a: "Seneca", p: "Choose the harder of two tasks on your list first, while your energy is highest." },
+  { q: "Waste no more time arguing about what a good man should be. Be one.", a: "Marcus Aurelius · Meditations", p: "Skip one debate today that won't change the outcome. Spend the minutes on the work itself." },
+  { q: "Difficulties strengthen the mind, as labor does the body.", a: "Seneca", p: "Choose the harder of two tasks first, while your energy is highest." },
   { q: "Wealth consists not in having great possessions, but in having few wants.", a: "Epictetus", p: "Before adding a dependency, library, or tool today, ask whether subtraction would solve it instead." }
 ];
 
@@ -460,15 +540,12 @@ var STOIC_QUOTES = [
 (function() {
   var d = new Date();
   document.getElementById('today-date').textContent =
-    d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-  document.getElementById('time-estimate').textContent =
-    TODAYS_ARTICLES.length + ' articles · ~' + TOTAL_READ_MINUTES + ' min total';
-
+    d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
   var start = new Date(d.getFullYear(), 0, 0);
   var dayOfYear = Math.floor((d - start) / 86400000);
   var pick = STOIC_QUOTES[dayOfYear % STOIC_QUOTES.length];
   document.getElementById('stoic-quote').textContent = '“' + pick.q + '”';
-  document.getElementById('stoic-author').textContent = '— ' + pick.a;
+  document.getElementById('stoic-author').textContent = pick.a;
   document.getElementById('stoic-practice').textContent = pick.p;
 })();
 
@@ -502,33 +579,111 @@ function escapeHtml(s) {
   });
 }
 
-// ---------- Render lists ----------
-function renderList(items, containerId, progressId) {
+var ALL_ITEMS = TODAYS_ARTICLES.concat(GROWTH_PICKS);
+var PER_ARTICLE_MIN = Math.round(TOTAL_READ_MINUTES / Math.max(TODAYS_ARTICLES.length, 1));
+
+// ---------- HERO: always exactly one thing ----------
+function renderHero() {
+  var readMap = getTodayRead();
+  var hero = document.getElementById('hero');
+  var current = null;
+  for (var i = 0; i < TODAYS_ARTICLES.length; i++) {
+    if (!readMap[TODAYS_ARTICLES[i].id]) { current = TODAYS_ARTICLES[i]; break; }
+  }
+  if (!current) {
+    var doneQuotes = [
+      "You could leave life right now. Let that determine what you do and say and think. — and you read everything anyway.",
+      "Queue cleared. The mind that did this can do the hard ticket too.",
+      "All five down. What stands in the way becomes the way — apparently nothing stood in the way today."
+    ];
+    hero.innerHTML =
+      '<div class="hero-bar"><span>● queue clear</span><span>' + TODAYS_ARTICLES.length + '/' + TODAYS_ARTICLES.length + '</span></div>' +
+      '<div class="hero-done">' +
+        '<div class="big">Today’s reading: done.</div>' +
+        '<div class="quote">' + escapeHtml(doneQuotes[new Date().getDate() % doneQuotes.length]) + '</div>' +
+      '</div>';
+    return;
+  }
+  var idx = TODAYS_ARTICLES.indexOf(current) + 1;
+  hero.innerHTML =
+    '<div class="hero-bar"><span>► read this first<span class="blink">_</span></span><span>' + idx + ' of ' + TODAYS_ARTICLES.length + ' · ~' + PER_ARTICLE_MIN + ' min</span></div>' +
+    '<div class="hero-body">' +
+      '<div class="hero-source">' + escapeHtml(current.source) + ' <span class="tag ' + current.tag + '">' + current.tag + '</span></div>' +
+      '<div class="hero-title"><a href="' + current.url + '" target="_blank" rel="noopener">' + escapeHtml(current.title) + '</a></div>' +
+      '<p class="hero-summary">' + escapeHtml(current.summary) + '</p>' +
+      '<div class="hero-actions">' +
+        '<a class="btn fill" href="' + current.url + '" target="_blank" rel="noopener" style="text-decoration:none">Open ↗</a>' +
+        '<button class="btn" id="hero-done-btn">Mark read ✓</button>' +
+        '<a class="hero-open" href="#reset">scattered? 90-sec reset ↓</a>' +
+      '</div>' +
+    '</div>';
+  document.getElementById('hero-done-btn').addEventListener('click', function() {
+    setArticleRead(current.id, true);
+    renderAll();
+  });
+}
+
+// ---------- Queue rows ----------
+function renderQueue(items, containerId, excludeCurrentHero) {
   var readMap = getTodayRead();
   var container = document.getElementById(containerId);
   container.innerHTML = '';
-  var done = 0;
-  items.forEach(function(a) {
+  var heroId = null;
+  if (excludeCurrentHero) {
+    for (var i = 0; i < TODAYS_ARTICLES.length; i++) {
+      if (!readMap[TODAYS_ARTICLES[i].id]) { heroId = TODAYS_ARTICLES[i].id; break; }
+    }
+  }
+  var shown = 0;
+  items.forEach(function(a, i) {
+    if (a.id === heroId) return;
+    shown++;
     var isRead = !!readMap[a.id];
-    if (isRead) done++;
-    var el = document.createElement('div');
-    el.className = 'article' + (isRead ? ' read' : '');
-    el.innerHTML =
-      '<input type="checkbox" class="check" ' + (isRead ? 'checked' : '') + ' aria-label="Mark as read">' +
-      '<div class="article-body">' +
-        '<div class="article-source">' + escapeHtml(a.source) + '</div>' +
-        '<div class="article-title"><a href="' + a.url + '" target="_blank" rel="noopener">' +
-          escapeHtml(a.title) +
-        '</a><span class="tag ' + a.tag + '">' + a.tag + '</span></div>' +
-        '<p class="article-summary">' + escapeHtml(a.summary) + '</p>' +
+    var det = document.createElement('details');
+    det.className = 'qrow' + (isRead ? ' read' : '');
+    det.innerHTML =
+      '<summary>' +
+        '<input type="checkbox" class="check" ' + (isRead ? 'checked' : '') + ' aria-label="Mark as read">' +
+        '<span class="q-idx">' + String(i + 1).padStart(2, '0') + '</span>' +
+        '<span class="q-title">' + escapeHtml(a.title) + '</span>' +
+        '<span class="tag ' + a.tag + '">' + a.tag + '</span>' +
+        '<span class="q-min">~' + PER_ARTICLE_MIN + 'm</span>' +
+        '<span class="q-caret">▶</span>' +
+      '</summary>' +
+      '<div class="q-body">' +
+        '<div class="q-source">' + escapeHtml(a.source) + '</div>' +
+        '<p class="q-summary">' + escapeHtml(a.summary) + '</p>' +
+        '<div class="q-actions"><a class="q-link" href="' + a.url + '" target="_blank" rel="noopener">open article ↗</a></div>' +
       '</div>';
-    el.querySelector('.check').addEventListener('change', function(e) {
+    var check = det.querySelector('.check');
+    check.addEventListener('click', function(e) { e.stopPropagation(); });
+    check.addEventListener('change', function(e) {
       setArticleRead(a.id, e.target.checked);
       renderAll();
     });
-    container.appendChild(el);
+    container.appendChild(det);
   });
-  document.getElementById(progressId).textContent = done + ' of ' + items.length + ' read';
+  if (shown === 0) {
+    container.innerHTML = '<details class="qrow"><summary><span class="q-title" style="color: var(--ink-muted)">Nothing else queued — the hero above is the whole list.</span></summary></details>';
+  }
+}
+
+// ---------- Progress + meta ----------
+function renderMeta() {
+  var readMap = getTodayRead();
+  var done = 0;
+  ALL_ITEMS.forEach(function(a) { if (readMap[a.id]) done++; });
+  var total = ALL_ITEMS.length;
+  var blocks = '';
+  for (var i = 0; i < total; i++) {
+    blocks += (i < done) ? '█' : '<span class="empty">░</span>';
+  }
+  document.getElementById('progress-line').innerHTML =
+    'PROGRESS [<span class="blocks">' + blocks + '</span>] ' + done + '/' + total +
+    ' · ~' + TOTAL_READ_MINUTES + ' min queued';
+  var unreadMain = TODAYS_ARTICLES.filter(function(a){ return !readMap[a.id]; }).length;
+  document.getElementById('queue-count').textContent = unreadMain + ' unread';
+  document.getElementById('resets-count').textContent = String(breathSessionCount());
 }
 
 // ---------- Streak ----------
@@ -541,7 +696,7 @@ function computeStreak() {
     var key = d.toISOString().slice(0,10);
     var any = Object.keys(s.read[key] || {}).length > 0;
     if (any) streak++;
-    else if (i === 0) { d.setDate(d.getDate() - 1); continue; } // today not started is fine
+    else if (i === 0) { d.setDate(d.getDate() - 1); continue; }
     else break;
     d.setDate(d.getDate() - 1);
   }
@@ -549,41 +704,34 @@ function computeStreak() {
 }
 function renderStreak() {
   var n = computeStreak();
-  var el = document.getElementById('streak-line');
-  if (n <= 0) {
-    el.innerHTML = '<span style="color: var(--text-muted)">Start your streak today</span>';
-    return;
-  }
-  el.innerHTML = '<span class="streak">' +
-    '<svg width="11" height="13" viewBox="0 0 11 13" fill="none" xmlns="http://www.w3.org/2000/svg">' +
-    '<path d="M5.5 0C5.5 3 2 4 2 7.5C2 10.5 3.5 12.5 5.5 12.5C7.5 12.5 9 10.5 9 7.5C9 6 8 5 8 4C8 5 7 5.5 6 5C6 3 5.5 1.5 5.5 0Z" fill="#0E7490"/>' +
-    '</svg>' + n + '-day streak</span>';
+  document.getElementById('streak-line').textContent = n > 0 ? ('▲ ' + n + ' day' + (n > 1 ? 's' : '')) : 'day zero';
 }
 
 function renderAll() {
-  renderList(TODAYS_ARTICLES, 'articles', 'today-progress');
-  renderList(GROWTH_PICKS, 'growth', 'growth-progress');
+  renderHero();
+  renderQueue(TODAYS_ARTICLES, 'queue', true);
+  renderQueue(GROWTH_PICKS, 'growth', false);
+  renderMeta();
   renderStreak();
 }
-renderAll();
 
 // ============================================================
 // BREATHING WIDGET
 // ============================================================
 var BREATH_MODES = {
-  box:  { name: 'Box breathing', phases: [
+  box:  { phases: [
             { label: 'inhale', secs: 4, scale: 1 },
             { label: 'hold',   secs: 4, scale: 1 },
-            { label: 'exhale', secs: 4, scale: 0.62 },
-            { label: 'hold',   secs: 4, scale: 0.62 }
+            { label: 'exhale', secs: 4, scale: 0.6 },
+            { label: 'hold',   secs: 4, scale: 0.6 }
           ],
-          hint: 'Box breathing — four counts each side. Three cycles is enough to lower your heart rate between deploys.' },
-  m478: { name: '4-7-8', phases: [
+          hint: 'Box breathing: four counts per side. Three loops settle a racing mind — the same drill pilots run before landing.' },
+  m478: { phases: [
             { label: 'inhale', secs: 4, scale: 1 },
             { label: 'hold',   secs: 7, scale: 1 },
-            { label: 'exhale', secs: 8, scale: 0.62 }
+            { label: 'exhale', secs: 8, scale: 0.6 }
           ],
-          hint: '4·7·8 — longer exhale activates the parasympathetic response. Good before a hard conversation or after an incident.' }
+          hint: '4·7·8: the long exhale flips the nervous system to rest mode. Use before a hard conversation, or after an incident.' }
 };
 
 var breath = { running: false, mode: 'box', phaseIdx: 0, secsLeft: 0, timer: null, cycles: 0 };
@@ -603,13 +751,13 @@ function logBreathSession() {
   s.breath[TODAY_KEY] = (s.breath[TODAY_KEY] || 0) + 1;
   saveState(s);
   renderBreathSessions();
+  renderMeta();
 }
 function renderBreathSessions() {
   var n = breathSessionCount();
   document.getElementById('breath-sessions').textContent =
-    n > 0 ? n + ' reset' + (n > 1 ? 's' : '') + ' today' : '';
+    n > 0 ? '[' + n + '] reset' + (n > 1 ? 's' : '') + ' logged today' : '';
 }
-renderBreathSessions();
 
 function startPhase() {
   var mode = BREATH_MODES[breath.mode];
@@ -627,7 +775,7 @@ function startPhase() {
       breath.phaseIdx = (breath.phaseIdx + 1) % mode.phases.length;
       if (breath.phaseIdx === 0) {
         breath.cycles++;
-        if (breath.cycles === 3) logBreathSession(); // a "session" = 3 cycles
+        if (breath.cycles === 3) logBreathSession();
       }
       if (breath.running) startPhase();
     } else {
@@ -642,11 +790,10 @@ function stopBreath() {
   breath.phaseIdx = 0;
   breath.cycles = 0;
   toggleBtn.textContent = 'Start';
-  toggleBtn.classList.add('primary');
   countEl.textContent = '—';
   phaseEl.textContent = 'ready';
   circle.style.transitionDuration = '1s';
-  circle.style.transform = 'scale(0.62)';
+  circle.style.transform = 'scale(0.6)';
 }
 
 toggleBtn.addEventListener('click', function() {
@@ -658,7 +805,7 @@ toggleBtn.addEventListener('click', function() {
   startPhase();
 });
 
-function setMode(modeKey, btnId) {
+function setMode(modeKey) {
   stopBreath();
   breath.mode = modeKey;
   hintEl.textContent = BREATH_MODES[modeKey].hint;
@@ -667,6 +814,9 @@ function setMode(modeKey, btnId) {
 }
 document.getElementById('mode-box').addEventListener('click', function() { setMode('box'); });
 document.getElementById('mode-478').addEventListener('click', function() { setMode('m478'); });
+
+renderBreathSessions();
+renderAll();
 </script>
 
 </body>
