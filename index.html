@@ -37,7 +37,6 @@
     font-family: var(--mono);
     color: var(--ink);
     background: var(--bg);
-    /* subtle paper grain */
     background-image: radial-gradient(rgba(46,44,39,0.025) 1px, transparent 1px);
     background-size: 4px 4px;
     line-height: 1.65;
@@ -50,8 +49,6 @@
   a { color: var(--clay); }
   a:hover { color: var(--ink); }
 
-  /* ===== Retro primitives ===== */
-  .rule { border: none; border-top: 2px solid var(--border-strong); margin: 0; }
   .label {
     font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.18em;
     font-weight: 700; color: var(--ink-muted);
@@ -94,7 +91,6 @@
     .meta-cell:nth-child(1), .meta-cell:nth-child(2) { border-bottom: 2px solid var(--border-strong); }
   }
 
-  /* ===== Progress bar ===== */
   .progress-line {
     margin: 14px 0 0; font-size: 13px; color: var(--ink-soft);
     font-variant-numeric: tabular-nums; letter-spacing: 0.02em;
@@ -102,7 +98,7 @@
   .progress-line .blocks { color: var(--sage); letter-spacing: -0.05em; }
   .progress-line .blocks .empty { color: var(--border); }
 
-  /* ===== Section headers ===== */
+  /* ===== Sections ===== */
   section { margin-top: 46px; }
   .sec-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 6px; }
   .sec-num {
@@ -112,7 +108,7 @@
   h2 { font-size: 15px; font-weight: 700; margin: 0; text-transform: uppercase; letter-spacing: 0.12em; }
   .sec-sub { font-size: 12px; color: var(--ink-muted); margin: 4px 0 18px; }
 
-  /* ===== HERO — the one thing ===== */
+  /* ===== HERO ===== */
   .hero { padding: 0; overflow: hidden; }
   .hero-bar {
     display: flex; justify-content: space-between; align-items: center;
@@ -127,8 +123,8 @@
   .hero-title { font-size: 23px; font-weight: 700; line-height: 1.3; margin: 0 0 14px; letter-spacing: -0.015em; }
   .hero-title a { color: var(--ink); text-decoration: none; border-bottom: 3px solid var(--gold-soft); }
   .hero-title a:hover { border-color: var(--clay); color: var(--clay); }
-  .hero-summary { font-size: 13.5px; color: var(--ink-soft); margin: 0 0 20px; max-width: 64ch; }
-  .hero-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .hero-summary { font-size: 13.5px; color: var(--ink-soft); margin: 0 0 18px; max-width: 64ch; }
+  .hero-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .btn {
     font-family: var(--mono); font-size: 12.5px; font-weight: 700;
     text-transform: uppercase; letter-spacing: 0.08em;
@@ -136,17 +132,40 @@
     padding: 9px 18px; cursor: pointer;
     box-shadow: 3px 3px 0 var(--shadow);
     transition: transform .08s ease, box-shadow .08s ease;
+    text-decoration: none; display: inline-block;
   }
   .btn:hover { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 var(--shadow); }
   .btn:active { transform: translate(2px,2px); box-shadow: 0 0 0 var(--shadow); }
   .btn.fill { background: var(--sage); border-color: var(--sage); color: #fff; }
   .btn.ghost { border-color: var(--border-strong); color: var(--ink-soft); box-shadow: none; }
-  .hero-open {
-    font-size: 12.5px; color: var(--ink-soft);
-  }
   .hero-done { padding: 34px 26px; text-align: center; }
   .hero-done .big { font-size: 21px; font-weight: 700; margin-bottom: 10px; }
   .hero-done .quote { font-size: 13px; color: var(--ink-muted); font-style: italic; max-width: 52ch; margin: 0 auto; }
+
+  /* ===== Mini reader (brief panel) ===== */
+  .brief-panel {
+    margin-top: 20px; border: 2px solid var(--border-strong);
+    background: var(--bg);
+  }
+  .brief-block { padding: 14px 18px; border-bottom: 2px solid var(--border); }
+  .brief-block:last-child { border-bottom: none; }
+  .brief-block h4 {
+    margin: 0 0 8px; font-size: 10.5px; text-transform: uppercase;
+    letter-spacing: 0.16em; font-weight: 800;
+  }
+  .brief-block.why h4 { color: var(--clay); }
+  .brief-block.how h4 { color: var(--slate); }
+  .brief-block.keys h4 { color: var(--sage); }
+  .brief-block p { margin: 0; font-size: 12.5px; color: var(--ink-soft); line-height: 1.65; }
+  .brief-keys { margin: 0; padding: 0; list-style: none; }
+  .brief-keys li {
+    font-size: 12.5px; color: var(--ink-soft); line-height: 1.6;
+    padding: 6px 0 6px 22px; position: relative;
+  }
+  .brief-keys li + li { border-top: 1px dashed var(--border); }
+  .brief-keys li::before {
+    content: "▪"; position: absolute; left: 4px; color: var(--sage); font-size: 11px;
+  }
 
   /* ===== Tags ===== */
   .tag {
@@ -160,7 +179,7 @@
   .tag.philosophy { color: #8A5B40; background: var(--clay-soft); }
   .tag.workflow { color: #86692E; background: var(--gold-soft); }
 
-  /* ===== Queue rows (progressive disclosure) ===== */
+  /* ===== Queue rows ===== */
   .queue { display: grid; gap: 0; border: 2px solid var(--border-strong); background: var(--surface); box-shadow: 5px 5px 0 var(--shadow); }
   details.qrow { border-bottom: 2px solid var(--border); }
   details.qrow:last-child { border-bottom: none; }
@@ -176,9 +195,10 @@
   .q-caret { color: var(--ink-faint); font-size: 11px; transition: transform .15s ease; }
   details.qrow[open] .q-caret { transform: rotate(90deg); }
   .q-body { padding: 2px 16px 16px 53px; }
+  @media (max-width: 620px) { .q-body { padding-left: 16px; } }
   .q-source { font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--clay); font-weight: 700; margin-bottom: 6px; }
   .q-summary { font-size: 13px; color: var(--ink-soft); margin: 0 0 12px; max-width: 62ch; }
-  .q-actions { display: flex; gap: 12px; align-items: center; }
+  .q-actions { display: flex; gap: 12px; align-items: center; margin-top: 12px; }
   .q-link { font-size: 12px; font-weight: 700; }
   details.qrow.read summary { opacity: 0.5; }
   details.qrow.read .q-title { text-decoration: line-through; text-decoration-color: var(--ink-faint); text-decoration-thickness: 1.5px; }
@@ -244,7 +264,7 @@
   }
   .stoic-prompt strong { color: var(--clay); text-transform: uppercase; font-size: 10.5px; letter-spacing: 0.12em; }
 
-  /* ===== Archive (collapsed by default) ===== */
+  /* ===== Archive ===== */
   details.archive > summary {
     list-style: none; cursor: pointer; user-select: none;
     display: flex; align-items: center; gap: 12px;
@@ -257,8 +277,6 @@
   details.archive > summary .q-caret { margin-left: auto; }
   details.archive[open] > summary .q-caret { transform: rotate(90deg); }
   details.archive .archive-body { padding: 22px 4px 4px; }
-  .group-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--ink-muted); font-weight: 700; margin: 20px 0 10px; }
-  .group-label:first-child { margin-top: 0; }
   .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
   .tile {
     background: var(--surface); border: 2px solid var(--border);
@@ -270,7 +288,6 @@
   .tile-name::before { content: "▸ "; color: var(--clay); }
   .tile-desc { font-size: 11.5px; color: var(--ink-soft); line-height: 1.5; }
 
-  /* ===== Footer ===== */
   footer.bot {
     margin-top: 64px; padding-top: 18px; border-top: 2px solid var(--border-strong);
     color: var(--ink-muted); font-size: 11px; text-align: center; letter-spacing: 0.04em;
@@ -298,14 +315,14 @@
 <!-- ============ 01 · NOW ============ -->
 <section id="now">
   <div class="sec-head"><span class="sec-num">01</span><h2>Now</h2></div>
-  <div class="sec-sub">One thing. Everything else can wait.</div>
+  <div class="sec-sub">One thing at a time. Not feeling it? Swap it for the next candidate.</div>
   <div class="card hero" id="hero"></div>
 </section>
 
 <!-- ============ 02 · UP NEXT ============ -->
 <section id="next">
   <div class="sec-head"><span class="sec-num">02</span><h2>Up next</h2></div>
-  <div class="sec-sub">Tap a row to see why it's worth your time. Check it off when read.</div>
+  <div class="sec-sub">Tap a row for the brief — key points, how to read it, and why it's relevant to you.</div>
   <div class="queue" id="queue"></div>
 </section>
 
@@ -441,7 +458,11 @@
 // ============================================================
 // TODAY'S READING LIST — automated daily refresh
 // The scheduled task replaces the block between the markers.
-// Keep markers exactly as-is. Fields: id, title, source, url, tag, summary.
+// Keep markers exactly as-is.
+// Fields: id, title, source, url, tag, minutes, summary,
+//         relevance (why it matters to Raafay/Ziina),
+//         readGuide (how to read it),
+//         brief (array of researched key points — the mini reader)
 // Tags: 'fintech' | 'architecture' | 'kubernetes'
 // ============================================================
 // ARTICLES_START
@@ -449,72 +470,143 @@ var TODAYS_ARTICLES = [
   {
     id: 'stripe-idempotency',
     title: "Designing robust and predictable APIs with idempotency",
-    source: "Stripe Engineering",
+    source: "Stripe Engineering · Brandur Leach",
     url: "https://stripe.com/blog/idempotency",
     tag: "fintech",
-    summary: "Networks fail mid-request; money must not move twice. The canonical write-up of idempotency keys: client-generated IDs, server-side correlation, and the 24-hour retention trade-off. Every retry path you own at Ziina should be measured against this pattern."
+    minutes: 8,
+    summary: "Networks fail in three distinct ways, and a client can't tell which one happened. This is the canonical write-up of the fix: idempotency keys, retries, exponential backoff, and jitter — by the engineer who shaped Stripe's API surface.",
+    relevance: "Every wallet top-up, P2P transfer, and webhook consumer at Ziina is a retry path. Worth auditing as you read: does each money-moving endpoint you own replay safely? Where do idempotency records live, and what's their TTL?",
+    readGuide: "Focused 8-minute read, top to bottom. Stop at the three failure cases under 'Planning for failure' until you can recite them — the rest of the piece is the cure. Skip the Ruby client internals unless you're writing an SDK.",
+    brief: [
+      "Three failure modes for any network call: connection never establishes, the call dies mid-operation, or it succeeds but the response is lost. The client can't distinguish them — that ambiguity is the whole problem.",
+      "Fix: idempotent endpoints. The client generates a unique Idempotency-Key per logical operation; the server correlates the key with request state and replays the cached result on retry. Side effects happen exactly once.",
+      "Stripe expires keys after 24 hours — long enough to ride out extended outages, then the same key counts as a new request. A deliberate, documented trade-off.",
+      "Retry responsibly: exponential backoff (waits growing 2^n) plus random jitter, or synchronized clients pile onto an already-degraded server — the thundering-herd problem.",
+      "PUT and DELETE are idempotent by HTTP semantics. It's POST — charges, transfers, anything money-shaped — that needs keys."
+    ]
   },
   {
     id: 'mt-ledgers-optimistic-locking',
     title: "Designing the Ledgers API with Optimistic Locking",
-    source: "Modern Treasury Journal",
+    source: "Modern Treasury Journal · Andy Qin",
     url: "https://www.moderntreasury.com/journal/designing-ledgers-with-optimistic-locking",
     tag: "fintech",
-    summary: "Concurrent writes to a hot wallet balance are the hardest problem in ledger engineering. Modern Treasury shows the lock_version approach they shipped — and the alternatives they rejected, which is the more instructive half. Production-tested, not theory."
+    minutes: 9,
+    summary: "How do you stop a balance going negative under concurrent debits? Modern Treasury walks through the race condition, why they chose optimistic over pessimistic locking, and the API they exposed — including the designs they rejected.",
+    relevance: "This is the exact contention problem on any Ziina wallet under concurrent spend. Compare with how your ledger serializes hot accounts — row locks? serializable isolation? a version column? Knowing the trade-offs lets you defend the choice in design review.",
+    readGuide: "Read 'Background' slowly — the race-condition diagrams are the core idea (~9 min total). The implementation section assumes Rails/ActiveRecord but the pattern is ORM-agnostic. 'The Interface' is the most reusable part if you design APIs.",
+    brief: [
+      "The naive check-balance-then-debit flow is a race (a 'phantom read'): two concurrent $50 debits both see enough balance and both commit — the account goes negative.",
+      "Pessimistic locking serializes everything and blocks reads. They chose optimistic locking — a lock_version column bumped on each write; a stale version triggers an error and rollback — because ledger traffic is overwhelmingly reads.",
+      "Subtle modeling insight: it's not the account row that needs versioning but the collection of its entries. They built a separate ledger-account-version record, touched on every new entry, so metadata edits don't collide with money movements.",
+      "They considered HTTP ETags for the API but exposed lock_version explicitly in the create-transaction payload — clearer semantics when one transaction touches multiple accounts.",
+      "lock_version is optional per request: skip it and version updates happen asynchronously. Strict concurrency only where you need it, eventual consistency where you don't."
+    ]
   },
   {
     id: 'infoq-architecture-trends-2025',
     title: "Software Architecture and Design Trends Report",
-    source: "InfoQ",
+    source: "InfoQ · Betts, Wells, Stiller, Bryant",
     url: "https://www.infoq.com/articles/architecture-trends-2025/",
     tag: "architecture",
-    summary: "A map of what's moving from innovator to early adopter: agentic systems, RAG as an architectural pattern, small specialized models, decentralized decision-making. Use it as a gap-finder — any named pattern you couldn't whiteboard today goes on your list."
+    minutes: 12,
+    summary: "InfoQ's editors place architecture techniques on the Crossing-the-Chasm adoption curve: agentic AI and small language models at innovator, RAG at early adopter, LLMs already late majority. A map of where to spend attention.",
+    relevance: "Ziina will be deciding where AI sits in a regulated payments stack. Knowing which patterns are innovator vs early-majority gives you the vocabulary to argue what's safe to adopt now vs pilot quietly — and any named pattern you can't whiteboard is your learning queue.",
+    readGuide: "Skim the Key Takeaways box first (2 min), study the trends graph, then read only the sections touching your roadmap — likely Agentic AI, RAG, and socio-technical architecture. ~12 min full, ~5 cherry-picked.",
+    brief: [
+      "How to read the graph: innovator/early-adopter items are where attention should go; 'crossing the chasm' means safe for mainstream. Their tell that something has crossed: people start using it inappropriately — LLMs jumped straight to late majority.",
+      "Agentic AI (innovator): design agent systems like microservices — clear boundaries, observable interactions, modules you can swap as models improve. Trust in nondeterministic decisions is the adoption bottleneck.",
+      "Small language models (innovator): specialized models that beat LLMs on narrow tasks, cheaper to train, deployable on your own hardware — latency and data-security wins that matter in finance.",
+      "RAG (early adopter): now the default technique for grounding LLM output; teams are starting to design data systems with RAG consumption in mind from day one.",
+      "Socio-technical architecture (early adopter): architects shifting from sole decision-makers to facilitators of decentralized decisions — advising teams instead of bottlenecking them."
+    ]
   },
   {
     id: 'figma-k8s-migration',
     title: "How We Migrated onto Kubernetes in Less Than 12 Months",
-    source: "Figma Engineering",
+    source: "Figma Engineering · Ian VonSeggern",
     url: "https://www.figma.com/blog/migrating-onto-kubernetes/",
     tag: "kubernetes",
-    summary: "Figma scaled a fake 'Hello World' service to find cluster limits before betting real traffic, then shifted over with weighted DNS and instant rollback. The most honest public account of what adopting k8s actually costs — and where it pays off."
+    minutes: 14,
+    summary: "Figma's ECS-to-EKS migration, told honestly: why they left (no StatefulSets, no Helm, slow NLB deregistration), how they scoped ruthlessly, and the load-testing and traffic-shifting mechanics that kept users unaware it was happening.",
+    relevance: "If Ziina runs on k8s, this explains the choices your platform team made — StatefulSets, node autoscaling, multi-cluster. If not, it's the best argument-structure you'll find for (or against) migrating: note how much of the case is ecosystem access, not k8s itself.",
+    readGuide: "Longest read today (~14 min). Short on time? 'Missing Kubernetes functionality' + 'Performing the migration safely' carry 80% of the value. The six migration principles near the end are a reusable checklist — save them.",
+    brief: [
+      "Why leave ECS: no StatefulSets meant fragile custom code to run etcd; no Helm meant OSS like Temporal was painful to operate; NLB target deregistration took minutes, slowing emergency deploys.",
+      "Scoping discipline made the timeline: swap the orchestrator, keep everything else identical — same deploys, same tooling. Exceptions only for one-way doors (service definitions as Bazel-generated YAML) and cheap wins (Karpenter node autoscaling).",
+      "Load-test before betting traffic: they scaled a 'Hello World' service to their largest service's pod count and found real limits — undersized Kyverno slowed every pod start.",
+      "Weighted DNS shifted traffic incrementally with instant rollback. Reliability by architecture: three active EKS clusters per service — an operator error that destroyed CoreDNS hit one-third of requests instead of causing a full outage, and retries absorbed most of that.",
+      "Post-launch lesson: multi-cluster + granular RBAC confused service owners; they paused roadmap work to make cluster/role inference automatic. Platform DX is part of the platform."
+    ]
   },
   {
     id: 'fowler-humans-agents',
     title: "Humans and Agents in Software Engineering Loops",
-    source: "martinfowler.com · March 2026",
+    source: "martinfowler.com · Kief Morris",
     url: "https://martinfowler.com/articles/exploring-gen-ai/humans-and-agents.html",
     tag: "architecture",
-    summary: "Where do engineers belong when agents write the code? Not micromanaging output, not abdicating review — designing the loop itself. The supervisory-engineering and risk-tiering framing maps directly onto AI-assisted work in a payments codebase."
+    minutes: 10,
+    summary: "Vibe code with no oversight, or inspect every line? Morris argues both are wrong: engineers belong 'on the loop' — designing the harness of specs, checks, and guidance that shapes what agents produce, rather than fixing their output by hand.",
+    relevance: "You already supervise AI on a payments codebase, where risk-tiering matters more than anywhere. This gives you the vocabulary to propose different harness rules for money-touching code (mandatory tests, invariant checks) vs UI code at Ziina.",
+    readGuide: "Read linearly — the loop diagrams build on each other (~10 min). The payoff is the last two sections: when agent output disappoints, train yourself to ask 'what harness change would have prevented this?' instead of editing the output.",
+    brief: [
+      "Two loops: the 'why loop' (idea → working software → learn → iterate) is yours. The 'how loop' (specs, code, tests) is increasingly the agent's. The vibe-coding debate is really about who runs which loop.",
+      "Humans fully out of the loop fails because internal quality has external effects: agents work faster and spiral less in a clean codebase. You pay for spaghetti in time and tokens, even if no human ever reads the code.",
+      "Humans in the loop — inspecting every generated line — makes you the bottleneck. Agents generate faster than you review, which may explain the mixed productivity data.",
+      "Humans on the loop: engineer the harness — the specs, quality checks, and workflow guidance that control the inner loops. Don't fix the artifact; fix the harness that produced it.",
+      "End state is a flywheel: agents evaluate the loop's own performance and recommend harness improvements, with risk-scored auto-approval for routine changes. Quality compounds instead of depending on vigilance."
+    ]
   }
 ];
 // ARTICLES_END
 
 // ============================================================
 // MIND & WORKFLOW — 1 philosophy pick + 1 workflow/tools pick
-// Keep markers exactly as-is. Tags: 'philosophy' | 'workflow'
+// Keep markers exactly as-is. Same fields as above.
+// Tags: 'philosophy' | 'workflow'
 // ============================================================
 // GROWTH_START
 var GROWTH_PICKS = [
   {
     id: 'zsombor-dichotomy-of-control',
     title: "Dichotomy of control in software",
-    source: "zsombor.io",
+    source: "zsombor.io · Zsombor Erdődy-Nagy",
     url: "https://zsombor.io/blog/2020/01/21/dichotomy-of-control.html",
     tag: "philosophy",
-    summary: "An engineer runs outages, slipped estimates, and promo-committee verdicts through Epictetus: what's yours to control, what isn't, and where the line actually sits. A better on-call companion than most incident-management guides."
+    minutes: 6,
+    summary: "An engineer runs four career-shaped disasters — S3 outages, blown estimates, promo rejections, biased interviewers — through Epictetus' chief task: separating what you control from what you don't.",
+    relevance: "On-call at a fintech is a dichotomy-of-control workout: the payment processor's outage isn't yours; your retry logic, your runbook, and your tone in the incident channel are. One sorting question — 'is this mine to control?' — saves real cortisol.",
+    readGuide: "Six quiet minutes, best before standup. As you hit each of his four examples, swap in your own current annoyance — the essay works better as a template than a text.",
+    brief: [
+      "The frame, from Epictetus' Discourses: 'identify and separate matters so that I can say clearly which are externals not under my control, and which have to do with the choices I actually control.'",
+      "Four engineering examples, each split into can't/can: you can't prevent S3 going down — you can build redundancy and failover; you can't pre-discover all tech debt — you can manage stakeholder expectations when estimates slip.",
+      "'Something being in our control doesn't mean it's easy to control.' The dichotomy is a focusing function, not an excuse.",
+      "Embrace imperfection: tests, dashboards, and cautious rollouts are double-edged — 100% coverage and 40-graph dashboards are control overdone. Successful engineers balance ROI rather than maximize control.",
+      "The line between controllable and not is fuzzy up close; sorting it well is practical wisdom you build by reflecting on incidents — which is an argument for actually doing retros."
+    ]
   },
   {
     id: 'pragmatic-ai-tooling-2026',
     title: "AI Tooling for Software Engineers in 2026",
-    source: "The Pragmatic Engineer · March 2026",
+    source: "The Pragmatic Engineer · Orosz & Nilsson",
     url: "https://newsletter.pragmaticengineer.com/p/ai-tooling-2026",
     tag: "workflow",
-    summary: "906 engineers surveyed: 95% use AI weekly, 55% run agents regularly, and the tool rankings flipped inside eight months. Benchmark your own setup against what experienced engineers adopted — not what vendors are pitching."
+    minutes: 12,
+    summary: "Survey of 906 engineers (median 11–15 years experience): AI is fully mainstream, agents are the new dividing line, and tool choice tracks company size more than preference. The data worth benchmarking your own workflow against.",
+    relevance: "Benchmark yourself: staff+ engineers are the heaviest agent users (63.5%) and most respondents run 2–4 tools. If your setup is one chat window, your peers have moved — worth a deliberate hour testing an agent workflow on a real Ziina ticket.",
+    readGuide: "Data-dense: read the ten 'interesting findings' first (3 min), then only the charts that surprise you. Sections 1–8 are free; the final takeaways sit behind the paywall and you lose little. ~12 min.",
+    brief: [
+      "95% of 906 respondents use AI tools at least weekly; 75% use AI for half or more of their engineering work; 56% for 70%+. The question is no longer whether, but which.",
+      "Claude Code went from release to most-used tool in eight months, and is the most-loved at 46% — vs Cursor 19% and GitHub Copilot 9%.",
+      "55% regularly use AI agents — led by staff+ engineers at 63.5%, ahead of every other level. The most experienced engineers are the most aggressive adopters.",
+      "Agent users are ~2x more likely to feel excited about AI; non-users 2x more likely to be skeptical. Whichever way the causation runs, the experience gap compounds.",
+      "Tool choice follows company size, not taste: 75% of the smallest companies run Claude Code while big enterprises default to Copilot via procurement. Common setup: a terminal agent driving changes, an IDE open beside it for review."
+    ]
   }
 ];
 // GROWTH_END
 
-var TOTAL_READ_MINUTES = 75; // refreshed by scheduler
+var TOTAL_READ_MINUTES = 53; // refreshed by scheduler
 
 // ============================================================
 // STOIC QUOTES — rotates by day of year, no refresh needed
@@ -572,6 +664,16 @@ function setArticleRead(id, isRead) {
   else delete s.read[TODAY_KEY][id];
   saveState(s);
 }
+function getHeroOffset() {
+  var s = getState();
+  return (s.heroOffset && s.heroOffset[TODAY_KEY]) || 0;
+}
+function bumpHeroOffset() {
+  var s = getState();
+  if (!s.heroOffset) s.heroOffset = {};
+  s.heroOffset[TODAY_KEY] = ((s.heroOffset[TODAY_KEY] || 0) + 1);
+  saveState(s);
+}
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, function(c) {
@@ -580,21 +682,41 @@ function escapeHtml(s) {
 }
 
 var ALL_ITEMS = TODAYS_ARTICLES.concat(GROWTH_PICKS);
-var PER_ARTICLE_MIN = Math.round(TOTAL_READ_MINUTES / Math.max(TODAYS_ARTICLES.length, 1));
+function minutesOf(a) {
+  return a.minutes || Math.round(TOTAL_READ_MINUTES / Math.max(TODAYS_ARTICLES.length, 1));
+}
 
-// ---------- HERO: always exactly one thing ----------
+// ---------- Brief panel (mini reader) ----------
+function briefPanelHtml(a) {
+  var html = '<div class="brief-panel">';
+  if (a.relevance) {
+    html += '<div class="brief-block why"><h4>Why this matters to you</h4><p>' + escapeHtml(a.relevance) + '</p></div>';
+  }
+  if (a.readGuide) {
+    html += '<div class="brief-block how"><h4>How to read it</h4><p>' + escapeHtml(a.readGuide) + '</p></div>';
+  }
+  if (a.brief && a.brief.length) {
+    html += '<div class="brief-block keys"><h4>Key points — the 2-minute version</h4><ul class="brief-keys">';
+    a.brief.forEach(function(pt) { html += '<li>' + escapeHtml(pt) + '</li>'; });
+    html += '</ul></div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+// ---------- HERO: one thing, swappable ----------
+var heroBriefOpen = false;
+
 function renderHero() {
   var readMap = getTodayRead();
   var hero = document.getElementById('hero');
-  var current = null;
-  for (var i = 0; i < TODAYS_ARTICLES.length; i++) {
-    if (!readMap[TODAYS_ARTICLES[i].id]) { current = TODAYS_ARTICLES[i]; break; }
-  }
-  if (!current) {
+  var candidates = TODAYS_ARTICLES.filter(function(a) { return !readMap[a.id]; });
+
+  if (candidates.length === 0) {
     var doneQuotes = [
-      "You could leave life right now. Let that determine what you do and say and think. — and you read everything anyway.",
       "Queue cleared. The mind that did this can do the hard ticket too.",
-      "All five down. What stands in the way becomes the way — apparently nothing stood in the way today."
+      "All five down. Apparently nothing stood in the way today.",
+      "Done. 'No man is free who is not master of himself' — today you were."
     ];
     hero.innerHTML =
       '<div class="hero-bar"><span>● queue clear</span><span>' + TODAYS_ARTICLES.length + '/' + TODAYS_ARTICLES.length + '</span></div>' +
@@ -604,21 +726,42 @@ function renderHero() {
       '</div>';
     return;
   }
-  var idx = TODAYS_ARTICLES.indexOf(current) + 1;
+
+  var pickIdx = getHeroOffset() % candidates.length;
+  var current = candidates[pickIdx];
+  var optLabel = candidates.length > 1
+    ? 'option ' + (pickIdx + 1) + '/' + candidates.length
+    : 'last one';
+
   hero.innerHTML =
-    '<div class="hero-bar"><span>► read this first<span class="blink">_</span></span><span>' + idx + ' of ' + TODAYS_ARTICLES.length + ' · ~' + PER_ARTICLE_MIN + ' min</span></div>' +
+    '<div class="hero-bar"><span>► read this first<span class="blink">_</span></span><span>' + optLabel + ' · ~' + minutesOf(current) + ' min</span></div>' +
     '<div class="hero-body">' +
       '<div class="hero-source">' + escapeHtml(current.source) + ' <span class="tag ' + current.tag + '">' + current.tag + '</span></div>' +
       '<div class="hero-title"><a href="' + current.url + '" target="_blank" rel="noopener">' + escapeHtml(current.title) + '</a></div>' +
       '<p class="hero-summary">' + escapeHtml(current.summary) + '</p>' +
       '<div class="hero-actions">' +
-        '<a class="btn fill" href="' + current.url + '" target="_blank" rel="noopener" style="text-decoration:none">Open ↗</a>' +
-        '<button class="btn" id="hero-done-btn">Mark read ✓</button>' +
-        '<a class="hero-open" href="#reset">scattered? 90-sec reset ↓</a>' +
+        '<a class="btn fill" href="' + current.url + '" target="_blank" rel="noopener">Open ↗</a>' +
+        '<button class="btn" id="hero-brief-btn">' + (heroBriefOpen ? 'Hide brief' : 'Brief ▤') + '</button>' +
+        '<button class="btn ghost" id="hero-done-btn">Mark read ✓</button>' +
+        (candidates.length > 1 ? '<button class="btn ghost" id="hero-swap-btn" title="Show another candidate">⟳ Swap</button>' : '') +
       '</div>' +
+      '<div id="hero-brief" style="display:' + (heroBriefOpen ? 'block' : 'none') + '">' + briefPanelHtml(current) + '</div>' +
     '</div>';
+
   document.getElementById('hero-done-btn').addEventListener('click', function() {
     setArticleRead(current.id, true);
+    heroBriefOpen = false;
+    renderAll();
+  });
+  document.getElementById('hero-brief-btn').addEventListener('click', function() {
+    heroBriefOpen = !heroBriefOpen;
+    document.getElementById('hero-brief').style.display = heroBriefOpen ? 'block' : 'none';
+    this.textContent = heroBriefOpen ? 'Hide brief' : 'Brief ▤';
+  });
+  var swap = document.getElementById('hero-swap-btn');
+  if (swap) swap.addEventListener('click', function() {
+    bumpHeroOffset();
+    heroBriefOpen = false;
     renderAll();
   });
 }
@@ -630,9 +773,8 @@ function renderQueue(items, containerId, excludeCurrentHero) {
   container.innerHTML = '';
   var heroId = null;
   if (excludeCurrentHero) {
-    for (var i = 0; i < TODAYS_ARTICLES.length; i++) {
-      if (!readMap[TODAYS_ARTICLES[i].id]) { heroId = TODAYS_ARTICLES[i].id; break; }
-    }
+    var candidates = TODAYS_ARTICLES.filter(function(a) { return !readMap[a.id]; });
+    if (candidates.length) heroId = candidates[getHeroOffset() % candidates.length].id;
   }
   var shown = 0;
   items.forEach(function(a, i) {
@@ -647,13 +789,14 @@ function renderQueue(items, containerId, excludeCurrentHero) {
         '<span class="q-idx">' + String(i + 1).padStart(2, '0') + '</span>' +
         '<span class="q-title">' + escapeHtml(a.title) + '</span>' +
         '<span class="tag ' + a.tag + '">' + a.tag + '</span>' +
-        '<span class="q-min">~' + PER_ARTICLE_MIN + 'm</span>' +
+        '<span class="q-min">~' + minutesOf(a) + 'm</span>' +
         '<span class="q-caret">▶</span>' +
       '</summary>' +
       '<div class="q-body">' +
         '<div class="q-source">' + escapeHtml(a.source) + '</div>' +
         '<p class="q-summary">' + escapeHtml(a.summary) + '</p>' +
-        '<div class="q-actions"><a class="q-link" href="' + a.url + '" target="_blank" rel="noopener">open article ↗</a></div>' +
+        briefPanelHtml(a) +
+        '<div class="q-actions"><a class="q-link" href="' + a.url + '" target="_blank" rel="noopener">open full article ↗</a></div>' +
       '</div>';
     var check = det.querySelector('.check');
     check.addEventListener('click', function(e) { e.stopPropagation(); });
@@ -664,15 +807,18 @@ function renderQueue(items, containerId, excludeCurrentHero) {
     container.appendChild(det);
   });
   if (shown === 0) {
-    container.innerHTML = '<details class="qrow"><summary><span class="q-title" style="color: var(--ink-muted)">Nothing else queued — the hero above is the whole list.</span></summary></details>';
+    container.innerHTML = '<details class="qrow"><summary><span class="q-title" style="color: var(--ink-muted)">Nothing else queued — the card above is the whole list.</span></summary></details>';
   }
 }
 
 // ---------- Progress + meta ----------
 function renderMeta() {
   var readMap = getTodayRead();
-  var done = 0;
-  ALL_ITEMS.forEach(function(a) { if (readMap[a.id]) done++; });
+  var done = 0, minsLeft = 0;
+  ALL_ITEMS.forEach(function(a) {
+    if (readMap[a.id]) done++;
+    else minsLeft += minutesOf(a);
+  });
   var total = ALL_ITEMS.length;
   var blocks = '';
   for (var i = 0; i < total; i++) {
@@ -680,7 +826,7 @@ function renderMeta() {
   }
   document.getElementById('progress-line').innerHTML =
     'PROGRESS [<span class="blocks">' + blocks + '</span>] ' + done + '/' + total +
-    ' · ~' + TOTAL_READ_MINUTES + ' min queued';
+    ' · ~' + minsLeft + ' min left';
   var unreadMain = TODAYS_ARTICLES.filter(function(a){ return !readMap[a.id]; }).length;
   document.getElementById('queue-count').textContent = unreadMain + ' unread';
   document.getElementById('resets-count').textContent = String(breathSessionCount());
