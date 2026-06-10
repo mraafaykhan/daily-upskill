@@ -468,93 +468,97 @@
 // ARTICLES_START
 var TODAYS_ARTICLES = [
   {
-    id: 'stripe-idempotency',
-    title: "Designing robust and predictable APIs with idempotency",
-    source: "Stripe Engineering · Brandur Leach",
-    url: "https://stripe.com/blog/idempotency",
+    id: 'uber-gulfstream-money-consistency',
+    title: "Revolutionizing Money Movements at Scale with Strong Data Consistency",
+    source: "Uber Engineering · Aakriti Singla & Simon Wu",
+    url: "https://www.uber.com/blog/money-scale-strong-data/",
     tag: "fintech",
-    minutes: 8,
-    summary: "Networks fail in three distinct ways, and a client can't tell which one happened. This is the canonical write-up of the fix: idempotency keys, retries, exponential backoff, and jitter — by the engineer who shaped Stripe's API surface.",
-    relevance: "Every wallet top-up, P2P transfer, and webhook consumer at Ziina is a retry path. Worth auditing as you read: does each money-moving endpoint you own replay safely? Where do idempotency records live, and what's their TTL?",
-    readGuide: "Focused 8-minute read, top to bottom. Stop at the three failure cases under 'Planning for failure' until you can recite them — the rest of the piece is the cure. Skip the Ruby client internals unless you're writing an SDK.",
+    minutes: 10,
+    summary: "How do you replace the payment platform under hundreds of millions of users with zero customer impact? Uber's answer is Gulfstream: a double-entry, self-reconciling order system — and a migration playbook built on versioned writebacks and 1%-to-100% rollouts.",
+    relevance: "Ziina is also an order-based money movement system at heart. The entries-must-sum-to-zero model, deterministic IDs for idempotency, and the dual-write-with-versions migration pattern are all directly reusable the next time you swap a wallet schema or payment provider.",
+    readGuide: "Two halves: architecture (order model, idempotency) then migration mechanics (writebacks, rollouts). The small table of trip-fare entries summing to zero is the crux — pause there. Skim the acknowledgements and conclusion. ~10 min.",
     brief: [
-      "Three failure modes for any network call: connection never establishes, the call dies mid-operation, or it succeeds but the response is lost. The client can't distinguish them — that ambiguity is the whole problem.",
-      "Fix: idempotent endpoints. The client generates a unique Idempotency-Key per logical operation; the server correlates the key with request state and replays the cached result on retry. Side effects happen exactly once.",
-      "Stripe expires keys after 24 hours — long enough to ride out extended outages, then the same key counts as a new request. A deliberate, documented trade-off.",
-      "Retry responsibly: exponential backoff (waits growing 2^n) plus random jitter, or synchronized clients pile onto an already-degraded server — the thundering-herd problem.",
-      "PUT and DELETE are idempotent by HTTP semantics. It's POST — charges, transfers, anything money-shaped — that needs keys."
+      "The legacy stack was two systems — collections from riders, disbursements to drivers — with no end-to-end view of money movement. Gulfstream, the 5th-generation platform, is a single role-agnostic, SOX-compliant system built on double-entry accounting that can reconcile itself.",
+      "Core model: each Job (trip, delivery) has Orders; each order has entries representing money in/out of accounts, and the sum of all entries is zero — the system cannot create or destroy money. Order creation and processing are decoupled via message queues.",
+      "Idempotency recipe: deterministically generated unique IDs for users, jobs, and orders; immutable orders; persist-then-process; processed-order IDs guarantee exactly-once handling.",
+      "Migration consistency: every account change is recorded in an entity change log with a per-user version number, dual-written to the legacy system. Writebacks are serialized by version — out-of-sequence events retry, then a reconciliation service replays the version gap from OrderStore.",
+      "Rollout discipline: control vs experimental groups, one small country first, then 1% → 5% → 10% → 20% → 50% → 100% per country, all controlled by dynamic config with no code deploys.",
+      "Took 2 years and 40+ engineers. Closing lesson: a highly reliable payment system rests on exponential retries of temporarily failing payments over a long period — plus continuous validation and dashboards watched daily."
     ]
   },
   {
-    id: 'mt-ledgers-optimistic-locking',
-    title: "Designing the Ledgers API with Optimistic Locking",
-    source: "Modern Treasury Journal · Andy Qin",
-    url: "https://www.moderntreasury.com/journal/designing-ledgers-with-optimistic-locking",
+    id: 'mt-accounting-for-developers-i',
+    title: "Accounting for Developers, Part I: The Fundamentals",
+    source: "Modern Treasury Journal · Lucas Rocha",
+    url: "https://www.moderntreasury.com/journal/accounting-for-developers-part-i",
     tag: "fintech",
     minutes: 9,
-    summary: "How do you stop a balance going negative under concurrent debits? Modern Treasury walks through the race condition, why they chose optimistic over pessimistic locking, and the API they exposed — including the designs they rejected.",
-    relevance: "This is the exact contention problem on any Ziina wallet under concurrent spend. Compare with how your ledger serializes hot accounts — row locks? serializable isolation? a version column? Knowing the trade-offs lets you defend the choice in design review.",
-    readGuide: "Read 'Background' slowly — the race-condition diagrams are the core idea (~9 min total). The implementation section assumes Rails/ActiveRecord but the pattern is ORM-agnostic. 'The Interface' is the most reusable part if you design APIs.",
+    summary: "If your product moves money, you're already in the business of accounting — whether you've noticed or not. The widely shared primer (updated 2025) that reframes accounts, debits, credits, and double-entry in plain engineering terms.",
+    relevance: "This is the vocabulary underneath every Ziina wallet balance and payout. Concrete exercise as you read: sketch Ziina's chart of accounts — user wallets as credit-normal liability accounts, the bank float as a debit-normal asset — and check the invariant holds.",
+    readGuide: "Read linearly; it builds. Slow down at debit-normal vs credit-normal — the part most engineers get wrong — and let the Modern Bagelry worked example consolidate it. Skip the product pitch at the end. ~9 min.",
     brief: [
-      "The naive check-balance-then-debit flow is a race (a 'phantom read'): two concurrent $50 debits both see enough balance and both commit — the account goes negative.",
-      "Pessimistic locking serializes everything and blocks reads. They chose optimistic locking — a lock_version column bumped on each write; a stale version triggers an error and rollback — because ledger traffic is overwhelmingly reads.",
-      "Subtle modeling insight: it's not the account row that needs versioning but the collection of its entries. They built a separate ledger-account-version record, touched on every new entry, so metadata edits don't collide with money movements.",
-      "They considered HTTP ETags for the API but exposed lock_version explicitly in the create-transaction payload — clearer semantics when one transaction touches multiple accounts.",
-      "lock_version is optional per request: skip it and version updates happen asynchronously. Strict concurrency only where you need it, eventual consistency where you don't."
+      "The most common failure mode in money-moving software: accidentally creating or destroying records of funds — surfacing as internal records that differ from bank statements, mismatched reconciliation engines, and balances that make no sense.",
+      "Core principle: every transaction records both where money came from and what it was used for — one transaction, at least two entries, each entry belonging to one account.",
+      "Store immutable transactions and compute balances from them. Mutating balances directly is simpler and faster, but error-prone — detecting and reconciling inaccuracies becomes non-trivial.",
+      "Account types: debit normal tracks uses of funds (assets, expenses); credit normal tracks sources (liabilities, equity, revenue). A debit entry adds to debit-normal and subtracts from credit-normal; credits do the reverse — and two accounts can both increase in one transaction.",
+      "The correctness invariant: sum of all debit-normal balances equals sum of all credit-normal balances. A mismatch means the system created or lost money out of nothing.",
+      "Part II applies all of this to build a Venmo-style wallet ledger — the closest published walkthrough to Ziina's exact shape; queue it for tomorrow if this lands."
     ]
   },
   {
-    id: 'infoq-architecture-trends-2025',
-    title: "Software Architecture and Design Trends Report",
-    source: "InfoQ · Betts, Wells, Stiller, Bryant",
-    url: "https://www.infoq.com/articles/architecture-trends-2025/",
+    id: 'infoq-resilient-event-driven',
+    title: "Designing Resilient Event-Driven Systems at Scale",
+    source: "InfoQ · Rajesh Kumar Pandey",
+    url: "https://www.infoq.com/articles/scalable-resilient-event-systems/",
     tag: "architecture",
     minutes: 12,
-    summary: "InfoQ's editors place architecture techniques on the Crossing-the-Chasm adoption curve: agentic AI and small language models at innovator, RAG at early adopter, LLMs already late majority. A map of where to spend attention.",
-    relevance: "Ziina will be deciding where AI sits in a regulated payments stack. Knowing which patterns are innovator vs early-majority gives you the vocabulary to argue what's safe to adopt now vs pilot quietly — and any named pattern you can't whiteboard is your learning queue.",
-    readGuide: "Skim the Key Takeaways box first (2 min), study the trends graph, then read only the sections touching your roadmap — likely Agentic AI, RAG, and socio-technical architecture. ~12 min full, ~5 cherry-picked.",
+    summary: "A 5x Black Friday spike hits your payment pipeline: cold starts, queue backlogs, database throttling, failing orders. This piece reframes resilience as staying predictable under pressure, with patterns — shuffle sharding, provisioning, fail-fast — for each layer.",
+    relevance: "Ziina's async paths — webhook consumers, transfer processing, notifications — are exactly this architecture. As you read, check two things: do critical payment events share a queue with low-priority ones, and is anyone alarming on your DLQ depth?",
+    readGuide: "Read the Key Takeaways box, then the Patterns and Common Pitfalls sections — that's the 80/20. The metastable-failures paper it links is a great follow-up. ~12 min.",
     brief: [
-      "How to read the graph: innovator/early-adopter items are where attention should go; 'crossing the chasm' means safe for mainstream. Their tell that something has crossed: people start using it inappropriately — LLMs jumped straight to late majority.",
-      "Agentic AI (innovator): design agent systems like microservices — clear boundaries, observable interactions, modules you can swap as models improve. Trust in nondeterministic decisions is the adoption bottleneck.",
-      "Small language models (innovator): specialized models that beat LLMs on narrow tasks, cheaper to train, deployable on your own hardware — latency and data-security wins that matter in finance.",
-      "RAG (early adopter): now the default technique for grounding LLM output; teams are starting to design data systems with RAG consumption in mind from day one.",
-      "Socio-technical architecture (early adopter): architects shifting from sole decision-makers to facilitators of decentralized decisions — advising teams instead of bottlenecking them."
+      "Mindset shift: latency is a signal of pressure building in the system, not just a number to minimize. Failure often shows up as lag, inflated retries, and surprise cost — not as a clean timeout.",
+      "Shuffle sharding: assign each customer to a random subset of shards so a noisy customer almost never fully collides with a well-behaved one. Drastically shrinks blast radius vs hashing everyone onto a few shared queues.",
+      "Provision (pre-allocate) capacity only for genuinely latency-critical paths — fraud detection flagged in seconds, not minutes — and autoscale the provisioned pool to keep it affordable.",
+      "Retries are not a panacea: unbounded, context-free retries multiply failure and can collapse the system. Bound them, use exponential backoff with jitter, and split errors into retryable vs non-retryable buckets.",
+      "Fail fast: a consumer that hung 30 seconds on failed DB auth was fixed with a 5-second timeout and explicit error signaling — visibility-timeout errors dropped and backlog stopped compounding.",
+      "Not all events are equal: a payment confirmation queued behind hundreds of logging events breaks SLAs. Separate queues or routing rules by priority — and alarm on DLQ size; one team ran 'green' for hours while messages silently piled into the DLQ."
     ]
   },
   {
-    id: 'figma-k8s-migration',
-    title: "How We Migrated onto Kubernetes in Less Than 12 Months",
-    source: "Figma Engineering · Ian VonSeggern",
-    url: "https://www.figma.com/blog/migrating-onto-kubernetes/",
-    tag: "kubernetes",
-    minutes: 14,
-    summary: "Figma's ECS-to-EKS migration, told honestly: why they left (no StatefulSets, no Helm, slow NLB deregistration), how they scoped ruthlessly, and the load-testing and traffic-shifting mechanics that kept users unaware it was happening.",
-    relevance: "If Ziina runs on k8s, this explains the choices your platform team made — StatefulSets, node autoscaling, multi-cluster. If not, it's the best argument-structure you'll find for (or against) migrating: note how much of the case is ecosystem access, not k8s itself.",
-    readGuide: "Longest read today (~14 min). Short on time? 'Missing Kubernetes functionality' + 'Performing the migration safely' carry 80% of the value. The six migration principles near the end are a reusable checklist — save them.",
-    brief: [
-      "Why leave ECS: no StatefulSets meant fragile custom code to run etcd; no Helm meant OSS like Temporal was painful to operate; NLB target deregistration took minutes, slowing emergency deploys.",
-      "Scoping discipline made the timeline: swap the orchestrator, keep everything else identical — same deploys, same tooling. Exceptions only for one-way doors (service definitions as Bazel-generated YAML) and cheap wins (Karpenter node autoscaling).",
-      "Load-test before betting traffic: they scaled a 'Hello World' service to their largest service's pod count and found real limits — undersized Kyverno slowed every pod start.",
-      "Weighted DNS shifted traffic incrementally with instant rollback. Reliability by architecture: three active EKS clusters per service — an operator error that destroyed CoreDNS hit one-third of requests instead of causing a full outage, and retries absorbed most of that.",
-      "Post-launch lesson: multi-cluster + granular RBAC confused service owners; they paused roadmap work to make cluster/role inference automatic. Platform DX is part of the platform."
-    ]
-  },
-  {
-    id: 'fowler-humans-agents',
-    title: "Humans and Agents in Software Engineering Loops",
-    source: "martinfowler.com · Kief Morris",
-    url: "https://martinfowler.com/articles/exploring-gen-ai/humans-and-agents.html",
+    id: 'aws-timeouts-retries-jitter',
+    title: "Timeouts, Retries, and Backoff with Jitter",
+    source: "Amazon Builders' Library · Marc Brooker",
+    url: "https://aws.amazon.com/builders-library/timeouts-retries-and-backoff-with-jitter/",
     tag: "architecture",
     minutes: 10,
-    summary: "Vibe code with no oversight, or inspect every line? Morris argues both are wrong: engineers belong 'on the loop' — designing the harness of specs, checks, and guidance that shapes what agents produce, rather than fixing their output by hand.",
-    relevance: "You already supervise AI on a payments codebase, where risk-tiering matters more than anywhere. This gives you the vocabulary to propose different harness rules for money-touching code (mandatory tests, invariant checks) vs UI code at Ziina.",
-    readGuide: "Read linearly — the loop diagrams build on each other (~10 min). The payoff is the last two sections: when agent output disappoints, train yourself to ask 'what harness change would have prevented this?' instead of editing the output.",
+    summary: "'Retries are selfish' — each one demands the server spend more resources on a single client's success. Amazon's canonical playbook for choosing timeouts from data, bounding retries, and why jitter matters as much as backoff.",
+    relevance: "Every service-to-service call at Ziina needs these three numbers. Use the p99.9 method to replace guessed timeouts, and the 243x retry-multiplication example as your argument for retrying at exactly one layer of the payment stack.",
+    readGuide: "Short, dense sections — read all of it. The retry-layering math and the token-bucket alternative to circuit breakers are the 80/20. Follow the jitter link only if you want the simulations. ~10 min.",
     brief: [
-      "Two loops: the 'why loop' (idea → working software → learn → iterate) is yours. The 'how loop' (specs, code, tests) is increasingly the agent's. The vibe-coding debate is really about who runs which loop.",
-      "Humans fully out of the loop fails because internal quality has external effects: agents work faster and spiral less in a clean codebase. You pay for spaghetti in time and tokens, even if no human ever reads the code.",
-      "Humans in the loop — inspecting every generated line — makes you the bottleneck. Agents generate faster than you review, which may explain the mixed productivity data.",
-      "Humans on the loop: engineer the harness — the specs, quality checks, and workflow guidance that control the inner loops. Don't fix the artifact; fix the harness that produced it.",
-      "End state is a flywheel: agents evaluate the loop's own performance and recommend harness improvements, with risk-scored auto-approval for routine changes. Quality compounds instead of depending on vigilance."
+      "Choose timeouts from data, not vibes: pick an acceptable false-timeout rate (say 0.1%) and set the timeout at the downstream service's p99.9 latency. War story: a 20ms timeout fired after every deploy because it unknowingly included TLS connection establishment.",
+      "Retries multiply through layers: a five-deep call stack with three retries per layer puts 243x load on a failing database, making recovery nearly impossible. Best practice: retry at a single point in the stack.",
+      "Instead of circuit breakers — which introduce modal, hard-to-test behavior — Amazon bounds retries with a local token bucket: retry freely while tokens last, then at a fixed trickle. Built into the AWS SDK since 2016.",
+      "APIs with side effects aren't safe to retry without idempotency; EC2's RunInstances exposes an explicit client token for exactly this. Read-only calls are usually safe; resource creation usually isn't.",
+      "Backoff alone fails under correlation: if all clients back off identically, they re-collide on the next attempt. Add jitter — and not just to retries: jitter cron jobs and periodic work too, using a deterministic per-host offset so problems reproduce in debuggable patterns."
+    ]
+  },
+  {
+    id: 'uber-mesos-to-kubernetes',
+    title: "Migrating Uber's Compute Platform to Kubernetes: A Technical Journey",
+    source: "Uber Engineering · Aditya Bhave & Arun Krishnan",
+    url: "https://www.uber.com/blog/migrating-ubers-compute-platform-to-kubernetes-a-technical-journey/",
+    tag: "kubernetes",
+    minutes: 13,
+    summary: "Uber moved 3 million cores and 4,000 services from deprecated Mesos to Kubernetes — and service owners never noticed. The honest version: what k8s lacked at their scale, what they built on top, and the quirks that bit them.",
+    relevance: "A field guide to what vanilla Kubernetes doesn't give you: rollback signals, gradual scaling, debugging artifacts after pod death. Reading it arms you to ask sharper questions about what your platform team has layered on top of stock k8s — and why.",
+    readGuide: "Skim the team-stats intro; the value is in Migration Challenges, Uber-Specific Customizations, and Unexpected Snags. The informer-reconciliation and rollback-heuristic snags are the most transferable lessons. ~13 min.",
+    brief: [
+      "Why migrate: Mesos was deprecated internally in 2021 with nearly no commits since — no community bug fixes or features. Kubernetes brought the industry-standard ecosystem: operators, cloud-native support, continuous security patches.",
+      "Contrarian scale choice: instead of the common many-small-clusters pattern (1,500–2,000 nodes), Uber runs 5,000–7,500-node clusters to cut stranded capacity — then benchmarked to 7,500 nodes / 200k pods / 150 pods-per-second by tuning QPS, API priority & fairness, and switching JSON to Proto encoding.",
+      "The migration was invisible to developers: the Up federation layer treated Mesos and k8s clusters as interchangeable and rebalanced services from highly-allocated (Mesos) to low-allocation (k8s) clusters automatically. Owners never knew it happened.",
+      "Custom additions where k8s fell short: a sidecar + uploader daemon to preserve core dumps and logs after pod deletion; a controller that scales in small verified batches for reshard-sensitive services; image prefetching plus CloneSet in-place updates for faster deploys.",
+      "Sharpest snags: default informer reconciliation replays events only every 8–10 hours — missed deploy events stalled rollouts up to 10h until they forced reconciliation every 15 minutes. Rollback heuristic: if >10% of pods restart 5+ times during rollout, auto-rollback fires.",
+      "Pace and humility: peak of 300,000 cores migrated in one week — but the timeline includes deliberate strategic pauses to fix reliability issues, which made the later acceleration possible."
     ]
   }
 ];
@@ -568,45 +572,46 @@ var TODAYS_ARTICLES = [
 // GROWTH_START
 var GROWTH_PICKS = [
   {
-    id: 'zsombor-dichotomy-of-control',
-    title: "Dichotomy of control in software",
-    source: "zsombor.io · Zsombor Erdődy-Nagy",
-    url: "https://zsombor.io/blog/2020/01/21/dichotomy-of-control.html",
+    id: 'method-stoic-software',
+    title: "A Stoic Look at Software Development",
+    source: "Method Insights · veteran developer essay",
+    url: "https://www.method.com/insights/stoic-look-at-software-development/",
     tag: "philosophy",
-    minutes: 6,
-    summary: "An engineer runs four career-shaped disasters — S3 outages, blown estimates, promo rejections, biased interviewers — through Epictetus' chief task: separating what you control from what you don't.",
-    relevance: "On-call at a fintech is a dichotomy-of-control workout: the payment processor's outage isn't yours; your retry logic, your runbook, and your tone in the incident channel are. One sorting question — 'is this mine to control?' — saves real cortisol.",
-    readGuide: "Six quiet minutes, best before standup. As you hit each of his four examples, swap in your own current annoyance — the essay works better as a template than a text.",
+    minutes: 7,
+    summary: "Quote by quote, a developer who's 'been programming longer than you've been an adult' applies Marcus Aurelius, Epictetus, and Seneca to agile, deployment fear, measurement, and work/life — concluding Marcus might as well have been a COBOL dev.",
+    relevance: "Pairs with today's stoic quote widget. The strongest section reads blameless postmortems as applied Epictetus — worth keeping in mind at Ziina's next incident review: presume everyone did their best with the tools they had, then fix the system.",
+    readGuide: "Read the three-tenet intro, then hop between quote sections — Psychological Safety and Work/Life Balance are the strongest. A relaxed 7 minutes; good with coffee before standup.",
     brief: [
-      "The frame, from Epictetus' Discourses: 'identify and separate matters so that I can say clearly which are externals not under my control, and which have to do with the choices I actually control.'",
-      "Four engineering examples, each split into can't/can: you can't prevent S3 going down — you can build redundancy and failover; you can't pre-discover all tech debt — you can manage stakeholder expectations when estimates slip.",
-      "'Something being in our control doesn't mean it's easy to control.' The dichotomy is a focusing function, not an excuse.",
-      "Embrace imperfection: tests, dashboards, and cautious rollouts are double-edged — 100% coverage and 40-graph dashboards are control overdone. Successful engineers balance ROI rather than maximize control.",
-      "The line between controllable and not is fuzzy up close; sorting it well is practical wisdom you build by reflecting on incidents — which is an argument for actually doing retros."
+      "Stoicism in three tenets: you won't be here long (memento mori), you control only your mind not external events, and challenges are the key to success — the obstacle is the way.",
+      "Meditations 8.7 mapped to engineering: accept nothing uncertain (measure before you change anything), act for the common good (don't cut corners, write tests, mentor), limit concern to what's in your power (not someone's hot take, not us-east-1 going down), embrace what comes (adapt — agile in a sentence).",
+      "Epictetus on tech debt: 'We don't abandon our pursuits because we despair of ever perfecting them.' Software is never done; make small incremental improvements and don't let perfect block good.",
+      "Psychological safety as stoic practice: teams that fear deployment because heads roll after outages are unhealthy. Expect failure, root-cause it blamelessly, make deploys easy until they're safe.",
+      "Seneca's dying lawyer — pleading in court with his last breath for the approval of spectators — is the warning: your job is not the most important thing in your life. And ask for help without shame; imposter syndrome is a paper monster."
     ]
   },
   {
-    id: 'pragmatic-ai-tooling-2026',
-    title: "AI Tooling for Software Engineers in 2026",
-    source: "The Pragmatic Engineer · Orosz & Nilsson",
-    url: "https://newsletter.pragmaticengineer.com/p/ai-tooling-2026",
+    id: 'hashimoto-large-projects',
+    title: "My Approach to Building Large Technical Projects",
+    source: "mitchellh.com · Mitchell Hashimoto",
+    url: "https://mitchellh.com/writing/building-large-technical-projects",
     tag: "workflow",
-    minutes: 12,
-    summary: "Survey of 906 engineers (median 11–15 years experience): AI is fully mainstream, agents are the new dividing line, and tool choice tracks company size more than preference. The data worth benchmarking your own workflow against.",
-    relevance: "Benchmark yourself: staff+ engineers are the heaviest agent users (63.5%) and most respondents run 2–4 tools. If your setup is one chat window, your peers have moved — worth a deliberate hour testing an agent workflow on a real Ziina ticket.",
-    readGuide: "Data-dense: read the ten 'interesting findings' first (3 min), then only the charts that surprise you. Sections 1–8 are free; the final takeaways sit behind the paywall and you lose little. ~12 min.",
+    minutes: 9,
+    summary: "Why do side projects die at week three? The HashiCorp co-founder's fix, told through building his Ghostty terminal: decompose so every chunk produces visible results, sprint to a demo every week, and never let known-future work block the next step.",
+    relevance: "Apply it to your learning projects — a toy double-entry ledger or a k8s homelab: pick the first sub-project you can see working in days (the ledger invariant check, not the full API), and aim for one or two demos a week. Momentum is the deliverable.",
+    readGuide: "Linear ~9 min. If rushed, 'Packaging it Up' is the 5-step summary — but 'Sprint to Demos' is the heart and worth the full read.",
     brief: [
-      "95% of 906 respondents use AI tools at least weekly; 75% use AI for half or more of their engineering work; 56% for 70%+. The question is no longer whether, but which.",
-      "Claude Code went from release to most-used tool in eight months, and is the most-loved at 46% — vs Cursor 19% and GitHub Copilot 9%.",
-      "55% regularly use AI agents — led by staff+ engineers at 63.5%, ahead of every other level. The most experienced engineers are the most aggressive adopters.",
-      "Agent users are ~2x more likely to feel excited about AI; non-users 2x more likely to be skeptical. Whichever way the causation runs, the experience gap compounds.",
-      "Tool choice follows company size, not taste: 75% of the smallest companies run Claude Code while big enterprises default to Copilot via procurement. Common setup: a terminal agent driving changes, an IDE open beside it for review."
+      "Don't start with 'launchable terminal running Neovim' — goals that big kill projects. Find sub-projects with results visible as soon as possible: VT parsing, a blank window, launching a child shell.",
+      "Early backend work is invisible, so automated tests ARE the demo: watching '1 test passed' become '13 tests passed' is real, motivating progress on a critical component.",
+      "Build good-enough sub-components, not finished ones — in-memory data structures even when you know you'll need a real database later. 'Do not let perfection be an enemy of progress.' Target one or two demos per week.",
+      "Demos deliver early product feedback, and experience can hurt here: senior engineers polish the perfect implementation, then the demo reveals the product itself sucks.",
+      "Build for yourself and adopt your own software immediately — beeline to only the features you personally need, then daily-drive it. The false starts (his arrow keys didn't work) hand you the exact next task list.",
+      "He threw the demo CLI away within days — and that's fine. The motivation and feedback it bought were the point, not the artifact."
     ]
   }
 ];
 // GROWTH_END
 
-var TOTAL_READ_MINUTES = 53; // refreshed by scheduler
+var TOTAL_READ_MINUTES = 54; // refreshed by scheduler
 
 // ============================================================
 // STOIC QUOTES — rotates by day of year, no refresh needed
