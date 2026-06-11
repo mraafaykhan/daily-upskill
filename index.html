@@ -1,5 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -468,97 +467,98 @@
 // ARTICLES_START
 var TODAYS_ARTICLES = [
   {
-    id: 'uber-gulfstream-money-consistency',
-    title: "Revolutionizing Money Movements at Scale with Strong Data Consistency",
-    source: "Uber Engineering · Aakriti Singla & Simon Wu",
-    url: "https://www.uber.com/blog/money-scale-strong-data/",
+    id: 'stripe-idempotency-keys',
+    title: "Designing Robust and Predictable APIs with Idempotency",
+    source: "Stripe Engineering · Brandur Leach",
+    url: "https://stripe.com/blog/idempotency",
     tag: "fintech",
-    minutes: 10,
-    summary: "How do you replace the payment platform under hundreds of millions of users with zero customer impact? Uber's answer is Gulfstream: a double-entry, self-reconciling order system — and a migration playbook built on versioned writebacks and 1%-to-100% rollouts.",
-    relevance: "Ziina is also an order-based money movement system at heart. The entries-must-sum-to-zero model, deterministic IDs for idempotency, and the dual-write-with-versions migration pattern are all directly reusable the next time you swap a wallet schema or payment provider.",
-    readGuide: "Two halves: architecture (order model, idempotency) then migration mechanics (writebacks, rollouts). The small table of trip-fare entries summing to zero is the crux — pause there. Skim the acknowledgements and conclusion. ~10 min.",
+    minutes: 7,
+    summary: "A network call fails mid-flight: did the charge happen or not? The client can't know — and that ambiguity is the central problem of payments APIs. Stripe's short canon on idempotency keys, retries, backoff, and jitter.",
+    relevance: "This is the founding text for the Idempotency-Key header your own wallet APIs should honor. As you read, audit one Ziina endpoint: what happens if a client replays a transfer request after a dropped connection mid-processing?",
+    readGuide: "Short and linear — read all of it. The three failure cases and the exactly-once section are the core; if you already do exponential backoff, skim the last third. ~7 min.",
     brief: [
-      "The legacy stack was two systems — collections from riders, disbursements to drivers — with no end-to-end view of money movement. Gulfstream, the 5th-generation platform, is a single role-agnostic, SOX-compliant system built on double-entry accounting that can reconcile itself.",
-      "Core model: each Job (trip, delivery) has Orders; each order has entries representing money in/out of accounts, and the sum of all entries is zero — the system cannot create or destroy money. Order creation and processing are decoupled via message queues.",
-      "Idempotency recipe: deterministically generated unique IDs for users, jobs, and orders; immutable orders; persist-then-process; processed-order IDs guarantee exactly-once handling.",
-      "Migration consistency: every account change is recorded in an entity change log with a per-user version number, dual-written to the legacy system. Writebacks are serialized by version — out-of-sequence events retry, then a reconciliation service replays the version gap from OrderStore.",
-      "Rollout discipline: control vs experimental groups, one small country first, then 1% → 5% → 10% → 20% → 50% → 100% per country, all controlled by dynamic config with no code deploys.",
-      "Took 2 years and 40+ engineers. Closing lesson: a highly reliable payment system rests on exponential retries of temporarily failing payments over a long period — plus continuous validation and dashboards watched daily."
+      "Three ways any call between two nodes fails: connection never establishes, the call dies midway leaving work in limbo, or the operation succeeds but the response is lost. Only the first is unambiguous to the client — the others make naive retries dangerous.",
+      "The cure is idempotent endpoints: callable any number of times, side effects exactly once. HTTP semantics give you PUT and DELETE as inherently idempotent; a record-create that ignores duplicates and returns success is the canonical example.",
+      "For must-run-exactly-once operations (charging a customer), the client generates a unique idempotency key per logical operation. On retry the server either processes it fresh, resumes/rolls back the in-limbo work, or replays the cached result of the completed operation.",
+      "Stripe implements this as the Idempotency-Key header on all POST endpoints — a client-supplied unique value that makes a double-charge impossible across retries.",
+      "Retry like a good citizen: exponential backoff (wait ∝ 2^n) so a downed server isn't hammered, plus random jitter so thousands of clients don't re-collide in synchronized waves — the thundering herd problem.",
+      "Closing trinity: handle failures consistently (always retry), safely (idempotency keys), responsibly (backoff + jitter). Stripe's own Ruby client does all three automatically in ~15 lines."
     ]
   },
   {
-    id: 'mt-accounting-for-developers-i',
-    title: "Accounting for Developers, Part I: The Fundamentals",
-    source: "Modern Treasury Journal · Lucas Rocha",
-    url: "https://www.moderntreasury.com/journal/accounting-for-developers-part-i",
+    id: 'monzo-coherence-reconciliation',
+    title: "Processing Payments Safely at Scale",
+    source: "Monzo Engineering · Joost van Oorschot",
+    url: "https://monzo.com/blog/2022/02/08/processing-payments-safely-at-scale",
     tag: "fintech",
-    minutes: 9,
-    summary: "If your product moves money, you're already in the business of accounting — whether you've noticed or not. The widely shared primer (updated 2025) that reframes accounts, debits, credits, and double-entry in plain engineering terms.",
-    relevance: "This is the vocabulary underneath every Ziina wallet balance and payout. Concrete exercise as you read: sketch Ziina's chart of accounts — user wallets as credit-normal liability accounts, the bank float as a debit-normal asset — and check the invariant holds.",
-    readGuide: "Read linearly; it builds. Slow down at debit-normal vs credit-normal — the part most engineers get wrong — and let the Modern Bagelry worked example consolidate it. Skip the product pitch at the end. ~9 min.",
+    minutes: 8,
+    summary: "How does a bank ship many times a day without breaking payments? Monzo's answer isn't more tests — it's two retroactive controls most tech teams skip: coherence checking and reconciliation, the safety nets that catch what code review misses.",
+    relevance: "Directly portable to Ziina: define coherence checks over your payment lifecycle states (every accepted transfer must reach settled-or-returned), and reconcile your internal ledger against partner-bank settlement daily. Ask yourself which invalid wallet states would currently go unnoticed.",
+    readGuide: "Read linearly — it's built as a risk primer, then one section per control. The payment-lifecycle diagram and the £5 reconciliation-break example carry the whole argument. ~8 min.",
     brief: [
-      "The most common failure mode in money-moving software: accidentally creating or destroying records of funds — surfacing as internal records that differ from bank statements, mismatched reconciliation engines, and balances that make no sense.",
-      "Core principle: every transaction records both where money came from and what it was used for — one transaction, at least two entries, each entry belonging to one account.",
-      "Store immutable transactions and compute balances from them. Mutating balances directly is simpler and faster, but error-prone — detecting and reconciling inaccuracies becomes non-trivial.",
-      "Account types: debit normal tracks uses of funds (assets, expenses); credit normal tracks sources (liabilities, equity, revenue). A debit entry adds to debit-normal and subtracts from credit-normal; credits do the reverse — and two accounts can both increase in one transaction.",
-      "The correctness invariant: sum of all debit-normal balances equals sum of all credit-normal balances. A mismatch means the system created or lost money out of nothing.",
-      "Part II applies all of this to build a Venmo-style wallet ledger — the closest published walkthrough to Ziina's exact shape; queue it for tomorrow if this lands."
+      "Framing: list failure modes (risks) and what prevents or detects each (controls). Code review, testing, and feature flags prevent bugs; the interesting controls are the ones that detect the bugs that get through anyway.",
+      "Coherence checks are rules that fire when an object sits in an invalid state — e.g. 'if a payment wasn't returned, a payout action must be scheduled' and 'scheduled payouts must pay the next day'.",
+      "They catch what alerting misses: a subtle bug silently dropping 0.1% of payments from the scheduler triggers no error and no metric threshold — but it leaves payments in states the rules declare impossible.",
+      "Two implementations at Monzo: SQL models over payment-state data in the warehouse, and event-driven backend services tracking state machines live. Production systems carry dozens of checks, sourced from risk reviews, incidents, and customer escalations.",
+      "Reconciliation compares two systems: the internal ledger (source of balances) versus the settlement account that actually moved money between banks. Two £5 payments processed but £15 deposited = a reconciliation break — a payment was likely dropped.",
+      "Breaks page an engineer and require acknowledged, evidenced resolution for an audit log. Reconciliation is the slowest control but the ultimate catch-all: anything that slips past prevention and coherence checks still shows up as money that doesn't add up."
     ]
   },
   {
-    id: 'infoq-resilient-event-driven',
-    title: "Designing Resilient Event-Driven Systems at Scale",
-    source: "InfoQ · Rajesh Kumar Pandey",
-    url: "https://www.infoq.com/articles/scalable-resilient-event-systems/",
+    id: 'figma-vertical-partitioning',
+    title: "The Growing Pains of Database Architecture",
+    source: "Figma Blog · Tim Liang",
+    url: "https://www.figma.com/blog/how-figma-scaled-to-multiple-databases/",
+    tag: "architecture",
+    minutes: 11,
+    summary: "Figma's single Postgres box hit 65% CPU at peak with traffic tripling yearly — and a saturated database means the product stops. Their counterintuitive move: skip horizontal sharding, split tables into separate databases, and migrate with ~30 seconds of impact.",
+    relevance: "The decision framework matters more than the answer: they rejected NoSQL, Vitess, and NewSQL for migration risk and chose the boring option that bought years of runway. A template for the next time Ziina debates re-platforming a hot datastore versus partitioning it.",
+    readGuide: "Read 'Exploring our options' and 'Our approach to partitioning' closely — that's the decision framework. The logical-replication mechanics are skimmable unless you run Postgres migrations yourself. ~11 min.",
+    brief: [
+      "Setup: one big RDS Postgres held nearly all metadata; traffic grows ~3x annually. Tactical fixes first — max instance size, read replicas, new DBs for new use cases, PgBouncer pooling — bought roughly a year.",
+      "Horizontal sharding was rejected deliberately: NoSQL/Vitess meant complex double-write migrations and app rewrites, managed NewSQL meant being the largest single-cluster guinea pig. Vertical partitioning — moving groups of tables to their own databases — gave short-term relief and a path to shard later.",
+      "Table selection ran on two axes: impact (measured as average active sessions, sampled from pg_stat_activity every 10ms) and isolation — moving tables costs you joins, foreign keys, and atomic transactions with what's left behind, so weakly-coupled table groups win.",
+      "Ruby + ActiveRecord made static analysis hopeless, so they built runtime validators that streamed real query/transaction-to-table mappings into Snowflake to find consistently co-queried groups.",
+      "Migration trick worth stealing: logical replication's initial copy was slow because Postgres updates indexes row-by-row — dropping destination indexes and rebuilding after the copy turned days into hours. Reverse replication gave them a rollback path.",
+      "Results: cutover in seconds (~2% of requests dropped for ~30s), repeated up to a 50-table operation, largest partition now idling at ~10% CPU — plus tooling and a routing service that set up the later horizontal-sharding work."
+    ]
+  },
+  {
+    id: 'discord-trillions-scylla',
+    title: "How Discord Stores Trillions of Messages",
+    source: "Discord Engineering · Bo Ingram",
+    url: "https://discord.com/blog/how-discord-stores-trillions-of-messages",
     tag: "architecture",
     minutes: 12,
-    summary: "A 5x Black Friday spike hits your payment pipeline: cold starts, queue backlogs, database throttling, failing orders. This piece reframes resilience as staying predictable under pressure, with patterns — shuffle sharding, provisioning, fail-fast — for each layer.",
-    relevance: "Ziina's async paths — webhook consumers, transfer processing, notifications — are exactly this architecture. As you read, check two things: do critical payment events share a queue with low-priority ones, and is anyone alarming on your DLQ depth?",
-    readGuide: "Read the Key Takeaways box, then the Patterns and Common Pitfalls sections — that's the 80/20. The metastable-failures paper it links is a great follow-up. ~12 min.",
+    summary: "Discord's 177-node Cassandra cluster was a 'high-toil' system: hot partitions, GC-pause firefights, weekend incidents. The fix wasn't just swapping databases — it was a Rust services layer that changed how traffic reaches the database at all.",
+    relevance: "The lesson for any hot datastore behind Ziina-scale traffic: a new database alone rarely saves you. Request coalescing plus consistent-hash routing — collapsing concurrent identical reads into one query — is the transferable pattern, whatever your storage engine.",
+    readGuide: "Skim the Cassandra-history opening; slow down at 'Data Services Serving Data' — the coalescing design is the heart — then enjoy the migration war story. ~12 min.",
     brief: [
-      "Mindset shift: latency is a signal of pressure building in the system, not just a number to minimize. Failure often shows up as lag, inflated retries, and surprise cost — not as a clean timeout.",
-      "Shuffle sharding: assign each customer to a random subset of shards so a noisy customer almost never fully collides with a well-behaved one. Drastically shrinks blast radius vs hashing everyone onto a few shared queues.",
-      "Provision (pre-allocate) capacity only for genuinely latency-critical paths — fraud detection flagged in seconds, not minutes — and autoscale the provisioned pool to keep it affordable.",
-      "Retries are not a panacea: unbounded, context-free retries multiply failure and can collapse the system. Bound them, use exponential backoff with jitter, and split errors into retryable vs non-retryable buckets.",
-      "Fail fast: a consumer that hung 30 seconds on failed DB auth was fixed with a 5-second timeout and explicit error signaling — visibility-timeout errors dropped and backlog stopped compounding.",
-      "Not all events are equal: a payment confirmation queued behind hundreds of logging events breaks SLAs. Separate queues or routing rules by priority — and alarm on DLQ size; one team ran 'green' for hours while messages silently piled into the DLQ."
+      "By 2022: 177 Cassandra nodes, trillions of messages, unpredictable latency. Root causes: read-heavy hot partitions (one busy channel hammers one partition), compaction backlogs forcing a node-juggling 'gossip dance', and JVM GC pauses bad enough to need manual node reboots.",
+      "ScyllaDB — Cassandra-compatible, C++, no garbage collector, shard-per-core isolation — had already taken every other Discord database by 2020. Messages waited until the ScyllaDB team fixed reverse-query performance, the last blocker.",
+      "Key insight: don't just swap the database, shield it. They built Rust 'data services' between the API monolith and storage — roughly one gRPC endpoint per query, zero business logic.",
+      "The flagship feature is request coalescing: the first request for a row spins up a worker task, concurrent identical requests subscribe to it, and the database sees one query. Consistent hash-based routing by channel ID sends same-channel traffic to the same instance to maximize coalescing.",
+      "The migration: ScyllaDB's Spark migrator estimated three months, so they extended their own Rust library in an afternoon — new estimate nine days. It ran at up to 3.2 million messages/second, then stalled at 99.9999% on a range of uncompacted tombstones; one compaction later, done.",
+      "Aftermath: 177 Cassandra nodes became 72 ScyllaDB nodes; historical-read p99 fell from 40–125ms to a steady 15ms, inserts from 5–70ms to 5ms — enough headroom that World Cup traffic spikes became a dashboard curiosity, not an incident."
     ]
   },
   {
-    id: 'aws-timeouts-retries-jitter',
-    title: "Timeouts, Retries, and Backoff with Jitter",
-    source: "Amazon Builders' Library · Marc Brooker",
-    url: "https://aws.amazon.com/builders-library/timeouts-retries-and-backoff-with-jitter/",
-    tag: "architecture",
-    minutes: 10,
-    summary: "'Retries are selfish' — each one demands the server spend more resources on a single client's success. Amazon's canonical playbook for choosing timeouts from data, bounding retries, and why jitter matters as much as backoff.",
-    relevance: "Every service-to-service call at Ziina needs these three numbers. Use the p99.9 method to replace guessed timeouts, and the 243x retry-multiplication example as your argument for retrying at exactly one layer of the payment stack.",
-    readGuide: "Short, dense sections — read all of it. The retry-layering math and the token-bucket alternative to circuit breakers are the 80/20. Follow the jitter link only if you want the simulations. ~10 min.",
-    brief: [
-      "Choose timeouts from data, not vibes: pick an acceptable false-timeout rate (say 0.1%) and set the timeout at the downstream service's p99.9 latency. War story: a 20ms timeout fired after every deploy because it unknowingly included TLS connection establishment.",
-      "Retries multiply through layers: a five-deep call stack with three retries per layer puts 243x load on a failing database, making recovery nearly impossible. Best practice: retry at a single point in the stack.",
-      "Instead of circuit breakers — which introduce modal, hard-to-test behavior — Amazon bounds retries with a local token bucket: retry freely while tokens last, then at a fixed trickle. Built into the AWS SDK since 2016.",
-      "APIs with side effects aren't safe to retry without idempotency; EC2's RunInstances exposes an explicit client token for exactly this. Read-only calls are usually safe; resource creation usually isn't.",
-      "Backoff alone fails under correlation: if all clients back off identically, they re-collide on the next attempt. Add jitter — and not just to retries: jitter cron jobs and periodic work too, using a deterministic per-host offset so problems reproduce in debuggable patterns."
-    ]
-  },
-  {
-    id: 'uber-mesos-to-kubernetes',
-    title: "Migrating Uber's Compute Platform to Kubernetes: A Technical Journey",
-    source: "Uber Engineering · Aditya Bhave & Arun Krishnan",
-    url: "https://www.uber.com/blog/migrating-ubers-compute-platform-to-kubernetes-a-technical-journey/",
+    id: 'cncf-k8s-hard-lessons',
+    title: "Top 5 Hard-Earned Lessons from the Experts on Managing Kubernetes",
+    source: "CNCF Blog · Stevie Caldwell (Fairwinds)",
+    url: "https://www.cncf.io/blog/2025/11/18/top-5-hard-earned-lessons-from-the-experts-on-managing-kubernetes/",
     tag: "kubernetes",
-    minutes: 13,
-    summary: "Uber moved 3 million cores and 4,000 services from deprecated Mesos to Kubernetes — and service owners never noticed. The honest version: what k8s lacked at their scale, what they built on top, and the quirks that bit them.",
-    relevance: "A field guide to what vanilla Kubernetes doesn't give you: rollback signals, gradual scaling, debugging artifacts after pod death. Reading it arms you to ask sharper questions about what your platform team has layered on top of stock k8s — and why.",
-    readGuide: "Skim the team-stats intro; the value is in Migration Challenges, Uber-Specific Customizations, and Unexpected Snags. The informer-reconciliation and rollback-heuristic snags are the most transferable lessons. ~13 min.",
+    minutes: 9,
+    summary: "Spinning up a cluster takes minutes; what nobody advertises is everything after. From years of running other people's clusters: the operational overhead, insecure defaults, autoscaling bill shocks, and upgrade debt that actually sink Kubernetes teams.",
+    relevance: "A checklist generator for your k8s learning: for each lesson, ask how Ziina's platform handles it — who owns RBAC, are namespaces actually network-isolated, what bounds the autoscaler, and how far behind upstream are your clusters right now?",
+    readGuide: "Headline-skim lessons 1 and 4 (overhead, hiring); read lessons 2, 3, and 5 deeply — security defaults, scaling costs, upgrade debt — plus the policy-engine bonus at the end. ~9 min.",
     brief: [
-      "Why migrate: Mesos was deprecated internally in 2021 with nearly no commits since — no community bug fixes or features. Kubernetes brought the industry-standard ecosystem: operators, cloud-native support, continuous security patches.",
-      "Contrarian scale choice: instead of the common many-small-clusters pattern (1,500–2,000 nodes), Uber runs 5,000–7,500-node clusters to cut stranded capacity — then benchmarked to 7,500 nodes / 200k pods / 150 pods-per-second by tuning QPS, API priority & fairness, and switching JSON to Proto encoding.",
-      "The migration was invisible to developers: the Up federation layer treated Mesos and k8s clusters as interchangeable and rebalanced services from highly-allocated (Mesos) to low-allocation (k8s) clusters automatically. Owners never knew it happened.",
-      "Custom additions where k8s fell short: a sidecar + uploader daemon to preserve core dumps and logs after pod deletion; a controller that scales in small verified batches for reshard-sensitive services; image prefetching plus CloneSet in-place updates for faster deploys.",
-      "Sharpest snags: default informer reconciliation replays events only every 8–10 hours — missed deploy events stalled rollouts up to 10h until they forced reconciliation every 15 minutes. Rollback heuristic: if >10% of pods restart 5+ times during rollout, auto-rollback fires.",
-      "Pace and humility: peak of 300,000 cores migrated in one week — but the timeline includes deliberate strategic pauses to fix reliability issues, which made the later acceleration possible."
+      "Managed providers make cluster creation easy, but production means owning the hidden add-ons: DNS, CNI, storage, monitoring, secrets, logging. Every abstraction layer you add for developer self-service makes debugging harder for the developers it serves — balance usability against transparency.",
+      "Defaults are almost never secure: built-in cluster roles get overprovisioned because RBAC objects are confusing, and Kubernetes has no built-in IAM (cloud integrations like AWS IRSA help). Namespaces give logical isolation only — real separation needs explicit NetworkPolicies and a CNI that enforces them.",
+      "Scan your images: they're built from layers of other images, and many orgs still pull from public registries unvalidated. Track provenance — where it's built, who maintains it.",
+      "Autoscaling's two traps: unbounded node autoscalers (Karpenter picking oversized instances = celebrating availability while the bill explodes) and HPA on CPU/memory when real apps bottleneck on requests-per-second or queue depth. Custom metrics cost more effort and scale far more accurately.",
+      "Tech debt compounds on two clocks: core upgrades (stay N+1; three releases/year; breaking changes like Ingress → Gateway API) and the ecosystem shifting under you (SOPS-in-Git giving way to External Secrets Operators). Deferring upgrades until a CVE forces a multi-version jump is the classic failure.",
+      "Two bonus rules: not every workload belongs on Kubernetes — a blog or one-off batch job doesn't justify the complexity — and enable a policy engine (OPA/Gatekeeper, Kyverno, or Polaris) from day one, because retrofitting policies onto running workloads breaks them and breeds resistance."
     ]
   }
 ];
@@ -572,46 +572,46 @@ var TODAYS_ARTICLES = [
 // GROWTH_START
 var GROWTH_PICKS = [
   {
-    id: 'method-stoic-software',
-    title: "A Stoic Look at Software Development",
-    source: "Method Insights · veteran developer essay",
-    url: "https://www.method.com/insights/stoic-look-at-software-development/",
+    id: 'aherring-dichotomy-control',
+    title: "The Stoic Dichotomy of Control, and an Anatomy of Thought",
+    source: "aherring.me · engineer's stoicism notebook",
+    url: "https://aherring.me/dichotomy-of-control",
     tag: "philosophy",
     minutes: 7,
-    summary: "Quote by quote, a developer who's 'been programming longer than you've been an adult' applies Marcus Aurelius, Epictetus, and Seneca to agile, deployment fear, measurement, and work/life — concluding Marcus might as well have been a COBOL dev.",
-    relevance: "Pairs with today's stoic quote widget. The strongest section reads blameless postmortems as applied Epictetus — worth keeping in mind at Ziina's next incident review: presume everyone did their best with the tools they had, then fix the system.",
-    readGuide: "Read the three-tenet intro, then hop between quote sections — Psychological Safety and Work/Life Balance are the strongest. A relaxed 7 minutes; good with coffee before standup.",
+    summary: "Epictetus called it the chief task in life: separating what you control from what you don't. This essay turns that one distinction into a working algorithm — for goals, emotions, and the daily review — rather than a comfort phrase.",
+    relevance: "The goal-setting move is the practical gem: target actions, never outcomes. 'Ship the migration safely' is in your control; 'no incidents this quarter' isn't. Pairs with today's stoic prompt — try rewriting one current goal in action terms.",
+    readGuide: "Skip the Stoicism primer if you know the names; start at 'The Dichotomy of Control' and read through 'An Anatomy of Thought'. The body/goals example is the keeper. ~7 min.",
     brief: [
-      "Stoicism in three tenets: you won't be here long (memento mori), you control only your mind not external events, and challenges are the key to success — the obstacle is the way.",
-      "Meditations 8.7 mapped to engineering: accept nothing uncertain (measure before you change anything), act for the common good (don't cut corners, write tests, mentor), limit concern to what's in your power (not someone's hot take, not us-east-1 going down), embrace what comes (adapt — agile in a sentence).",
-      "Epictetus on tech debt: 'We don't abandon our pursuits because we despair of ever perfecting them.' Software is never done; make small incremental improvements and don't let perfect block good.",
-      "Psychological safety as stoic practice: teams that fear deployment because heads roll after outages are unhealthy. Expect failure, root-cause it blamelessly, make deploys easy until they're safe.",
-      "Seneca's dying lawyer — pleading in court with his last breath for the approval of spectators — is the warning: your job is not the most important thing in your life. And ask for help without shame; imposter syndrome is a paper monster."
+      "The line is drawn at your own actions: opinions, pursuits, choices are in your control; body, property, reputation, and all outcomes are not. Most outcomes can be influenced — but only the influencing action itself is yours.",
+      "Applied to goals: don't target 'lose X pounds in Y weeks' (an outcome); target 'eat whole foods, cut soft drinks' (actions). Health itself is a 'preferred indifference' — pursue it, enjoy it, don't be wrecked when externals take it.",
+      "Emotions split the same way: feeling one isn't in your control, your response is. Negative emotions self-perpetuate by steering your thoughts — the choice point is whether to feed the loop or cut it early.",
+      "The daily practice is cheap mindfulness: replay the day's would-do-differently moments and reconstruct what you were thinking and physically feeling — tight chest, clenched fist, racing thoughts — then use those sensations as in-the-moment tripwires next time.",
+      "When a thought grips you, decompose it first-principles style and ask of each part: is this within my control? With repetition the filter goes subconscious — a mental model deliberately installed, exactly like learning to segment a debugging problem."
     ]
   },
   {
-    id: 'hashimoto-large-projects',
-    title: "My Approach to Building Large Technical Projects",
-    source: "mitchellh.com · Mitchell Hashimoto",
-    url: "https://mitchellh.com/writing/building-large-technical-projects",
+    id: 'simonw-llms-for-code',
+    title: "Here's How I Use LLMs to Help Me Write Code",
+    source: "simonwillison.net · Simon Willison",
+    url: "https://simonwillison.net/2025/Mar/11/using-llms-for-code/",
     tag: "workflow",
-    minutes: 9,
-    summary: "Why do side projects die at week three? The HashiCorp co-founder's fix, told through building his Ghostty terminal: decompose so every chunk produces visible results, sprint to a demo every week, and never let known-future work block the next step.",
-    relevance: "Apply it to your learning projects — a toy double-entry ledger or a k8s homelab: pick the first sub-project you can see working in days (the ledger invariant check, not the full API), and aim for one or two demos a week. Momentum is the deliverable.",
-    readGuide: "Linear ~9 min. If rushed, 'Packaging it Up' is the 5-step summary — but 'Sprint to Demos' is the heart and worth the full read.",
+    minutes: 13,
+    summary: "Why do some developers get huge value from LLMs while others bounce off? Willison's answer: it's a learnable, unintuitive skill. His full playbook — mental model, context management, and a real feature built in 17 minutes for $0.61.",
+    relevance: "A calibration check for how you already use Claude or Copilot at Ziina. The two-mode split is the upgrade: open-ended 'show me options' during research, then dictatorial function-signature prompts for production code — most people get stuck between the modes.",
+    readGuide: "Read 'Context is king' through 'You have to test what it writes!' carefully — that's the method. The Claude Code colophon walkthrough is worth following prompt-by-prompt; skim the tools list. ~13 min.",
     brief: [
-      "Don't start with 'launchable terminal running Neovim' — goals that big kill projects. Find sub-projects with results visible as soon as possible: VT parsing, a blank window, launching a child shell.",
-      "Early backend work is invisible, so automated tests ARE the demo: watching '1 test passed' become '13 tests passed' is real, motivating progress on a critical component.",
-      "Build good-enough sub-components, not finished ones — in-memory data structures even when you know you'll need a real database later. 'Do not let perfection be an enemy of progress.' Target one or two demos per week.",
-      "Demos deliver early product feedback, and experience can hurt here: senior engineers polish the perfect implementation, then the demo reveals the product itself sucks.",
-      "Build for yourself and adopt your own software immediately — beeline to only the features you personally need, then daily-drive it. The false starts (his arrow keys didn't work) hand you the exact next task list.",
-      "He threw the demo CLI away within days — and that's fine. The motivation and feedback it bought were the point, not the artifact."
+      "Mental model: an over-confident pair programmer — lightning at lookups, tireless at tedium, and wrong in deeply inhuman ways. Don't let failures that would discredit a human discredit the tool; note what it can't do and re-test on new models.",
+      "Context is king: the whole conversation is the prompt, so reset chats when they sour, seed new ones with existing code, and prefer tools that show you exactly what's in context. Training cut-offs even shape his library choices — boring, well-represented tech wins.",
+      "Two distinct modes: research ('what are my options for HTTP libraries in Rust? Include examples') versus production, where he turns authoritarian — detailed function signatures, exact tech choices, 'now write the tests with pytest'. The LLM types; he designs.",
+      "The unoutsourceable part: testing. If you haven't seen it run, it isn't a working system — your job is delivering working systems, with or without a model in the loop.",
+      "Worked example: the tools.simonwillison.net colophon page, built with Claude Code in 17 minutes for $0.61 across six conversational prompts — then the human took over when GitHub Pages deploys double-fired, because experience knew where to look and prompting didn't.",
+      "The real win isn't speed, it's ambition: LLMs make projects viable that wouldn't justify the time at all. And they amplify existing expertise — 25 years of context made those prompts work; the same session on an unfamiliar stack would go very differently."
     ]
   }
 ];
 // GROWTH_END
 
-var TOTAL_READ_MINUTES = 54; // refreshed by scheduler
+var TOTAL_READ_MINUTES = 47; // refreshed by scheduler
 
 // ============================================================
 // STOIC QUOTES — rotates by day of year, no refresh needed
