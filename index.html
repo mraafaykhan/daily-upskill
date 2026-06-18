@@ -467,98 +467,98 @@
 // ARTICLES_START
 var TODAYS_ARTICLES = [
   {
-    id: 'stripe-idempotency-keys',
-    title: "Designing Robust and Predictable APIs with Idempotency",
-    source: "Stripe Engineering · Brandur Leach",
-    url: "https://stripe.com/blog/idempotency",
-    tag: "fintech",
-    minutes: 7,
-    summary: "A network call fails mid-flight: did the charge happen or not? The client can't know — and that ambiguity is the central problem of payments APIs. Stripe's short canon on idempotency keys, retries, backoff, and jitter.",
-    relevance: "This is the founding text for the Idempotency-Key header your own wallet APIs should honor. As you read, audit one Ziina endpoint: what happens if a client replays a transfer request after a dropped connection mid-processing?",
-    readGuide: "Short and linear — read all of it. The three failure cases and the exactly-once section are the core; if you already do exponential backoff, skim the last third. ~7 min.",
-    brief: [
-      "Three ways any call between two nodes fails: connection never establishes, the call dies midway leaving work in limbo, or the operation succeeds but the response is lost. Only the first is unambiguous to the client — the others make naive retries dangerous.",
-      "The cure is idempotent endpoints: callable any number of times, side effects exactly once. HTTP semantics give you PUT and DELETE as inherently idempotent; a record-create that ignores duplicates and returns success is the canonical example.",
-      "For must-run-exactly-once operations (charging a customer), the client generates a unique idempotency key per logical operation. On retry the server either processes it fresh, resumes/rolls back the in-limbo work, or replays the cached result of the completed operation.",
-      "Stripe implements this as the Idempotency-Key header on all POST endpoints — a client-supplied unique value that makes a double-charge impossible across retries.",
-      "Retry like a good citizen: exponential backoff (wait ∝ 2^n) so a downed server isn't hammered, plus random jitter so thousands of clients don't re-collide in synchronized waves — the thundering herd problem.",
-      "Closing trinity: handle failures consistently (always retry), safely (idempotency keys), responsibly (backoff + jitter). Stripe's own Ruby client does all three automatically in ~15 lines."
-    ]
-  },
-  {
-    id: 'monzo-coherence-reconciliation',
-    title: "Processing Payments Safely at Scale",
-    source: "Monzo Engineering · Joost van Oorschot",
-    url: "https://monzo.com/blog/2022/02/08/processing-payments-safely-at-scale",
+    id: 'mt-enforcing-immutability-ledger',
+    title: "Enforcing Immutability in your Double-Entry Ledger",
+    source: "Modern Treasury Journal · Jason Jong",
+    url: "https://www.moderntreasury.com/journal/enforcing-immutability-in-your-double-entry-ledger",
     tag: "fintech",
     minutes: 8,
-    summary: "How does a bank ship many times a day without breaking payments? Monzo's answer isn't more tests — it's two retroactive controls most tech teams skip: coherence checking and reconciliation, the safety nets that catch what code review misses.",
-    relevance: "Directly portable to Ziina: define coherence checks over your payment lifecycle states (every accepted transfer must reach settled-or-returned), and reconcile your internal ledger against partner-bank settlement daily. Ask yourself which invalid wallet states would currently go unnoticed.",
-    readGuide: "Read linearly — it's built as a risk primer, then one section per control. The payment-lifecycle diagram and the £5 reconciliation-break example carry the whole argument. ~8 min.",
+    summary: "Why should a ledger never let you UPDATE an amount? This piece argues that mutating financial records irreversibly destroys the audit trail, and shows how separating mutable business objects (Orders) from immutable accounting entries (Ledger Transactions) keeps money movement reconstructable.",
+    relevance: "This is the foundational mental model for Ziina's wallet ledger: every balance change must be an append-only entry, never an in-place edit. Read it asking whether your wallet's adjustments, refunds, and reversals create new entries or silently mutate existing rows — the latter is a reconciliation time bomb.",
+    readGuide: "Read 'Fallacies with Mutability' and 'Implementing Immutability' deeply — that's the 80/20 and the two correction techniques. Skim the marketplace setup. Don't miss the pending/posted/archived section; it's the most directly applicable part to payment rails. ~8 min.",
     brief: [
-      "Framing: list failure modes (risks) and what prevents or detects each (controls). Code review, testing, and feature flags prevent bugs; the interesting controls are the ones that detect the bugs that get through anyway.",
-      "Coherence checks are rules that fire when an object sits in an invalid state — e.g. 'if a payment wasn't returned, a payout action must be scheduled' and 'scheduled payouts must pay the next day'.",
-      "They catch what alerting misses: a subtle bug silently dropping 0.1% of payments from the scheduler triggers no error and no metric threshold — but it leaves payments in states the rules declare impossible.",
-      "Two implementations at Monzo: SQL models over payment-state data in the warehouse, and event-driven backend services tracking state machines live. Production systems carry dozens of checks, sourced from risk reviews, incidents, and customer escalations.",
-      "Reconciliation compares two systems: the internal ledger (source of balances) versus the settlement account that actually moved money between banks. Two £5 payments processed but £15 deposited = a reconciliation break — a payment was likely dropped.",
-      "Breaks page an engineer and require acknowledged, evidenced resolution for an audit log. Reconciliation is the slowest control but the ultimate catch-all: anything that slips past prevention and coherence checks still shows up as money that doesn't add up."
+      "The core rule: isolate mutable business-level objects (Orders, a user-facing presentation) from immutable accounting-level objects (Ledger Transactions, the source of truth). Editing an Order's amount is fine; editing a posted ledger entry destroys the audit trail.",
+      "Concrete failure case: an adjustment landing two weeks after a weekly payout leaves the merchant payout wrong with no way to attribute the discrepancy — tracking a $10 error in a $10,000 payout across thousands of orders can take days.",
+      "Two sanctioned ways to correct an immutable entry: (1) fully reverse it with an opposite-amount entry then post a new correct one, or (2) post a single delta entry that sums to the correct amount. Multiple ledger transactions can point to one Order.",
+      "Because corrections are new entries, one Order can legitimately be split across more than one Payout — an adjustment in a later week doesn't retroactively corrupt a prior week's closed payout.",
+      "Ledger Transactions carry a status: pending (still mutable) or posted (immutable), plus archived for failures. This models real bank rails where ACH/wires take up to ~3 days to settle and may still fail.",
+      "Design rationale for keeping a mutable pending state instead of pure immutability: reversing every honest in-flight mistake leaves a messy trail — 'imagine if your keyboard had no backspace key.' Pending is optional and at the developer's discretion per product."
     ]
   },
   {
-    id: 'figma-vertical-partitioning',
-    title: "The Growing Pains of Database Architecture",
-    source: "Figma Blog · Tim Liang",
-    url: "https://www.figma.com/blog/how-figma-scaled-to-multiple-databases/",
+    id: 'uber-ledgerstore-trillions-indexes',
+    title: "How LedgerStore Supports Trillions of Indexes at Uber",
+    source: "Uber Engineering · Kaushik Devarajaiah",
+    url: "https://www.uber.com/blog/how-ledgerstore-supports-trillions-of-indexes/",
+    tag: "fintech",
+    minutes: 12,
+    summary: "How do you index hundreds of billions of immutable money-movement ledgers without duplicate-charging a customer or melting a database partition? Uber details three index classes — strongly consistent, eventually consistent, and time-range — and the very different data-modeling trade-offs each one forces.",
+    relevance: "Ziina's wallet has the exact read patterns Uber names: a card-authorization hold that must be strongly consistent (or you double-charge), and a payment-history feed that can lag a few seconds. Read it to decide deliberately, per access path, where you pay for read-your-write guarantees versus where eventual consistency is safe.",
+    readGuide: "Read the three index-type sections deeply — that's where the engineering judgment lives. The DynamoDB-vs-Docstore time-range comparison is the densest part; skim it unless you're choosing a store. Skip lifecycle/backfill on a first pass. ~12 min.",
+    brief: [
+      "Strongly consistent indexes use a 2-phase commit: write an index 'intent' before the record, commit it asynchronously after the record write succeeds. They guarantee read-your-write — critical for card-auth holds so a duplicate charge can't slip in before the hold is visible.",
+      "The cost of strong consistency is higher write latency and lower availability (any index-intent write failure fails the whole insert), so it's reserved only for use cases that genuinely demand it. Orphaned intents are reconciled lazily at read time.",
+      "Eventually consistent indexes (e.g. the payment-history page) are built in a background process via Docstore Materialized Views, fully isolated from the online write path — a few seconds of lag is acceptable, and they avoid the latency/availability hit.",
+      "Time-range indexes (for tiering old ledgers to cold storage) suffer hot partitions because ledger timestamps cluster around wall-clock now; at ~1K trips/sec even 1-second granularity hits DynamoDB's 1K WCU throttling limit.",
+      "DynamoDB needed a two-table workaround: a hash-bucketed write-optimized buffer table plus a time-partitioned read-optimized permanent table — operationally fragile (missing buffer tables caused availability incidents). Docstore collapsed this to one table using a fixed shard count and sorted primary keys with bounded prefix scans.",
+      "Results: 2+ trillion indexes built with zero detected data inconsistencies over 6 months, no production incidents during backfill, and ~$6M/year saved by consolidating off DynamoDB onto Docstore. Completeness is verified via order-independent checksums compared across source-of-truth and index tables."
+    ]
+  },
+  {
+    id: 'canva-scaling-to-count-billions',
+    title: "Scaling to Count Billions",
+    source: "Canva Engineering Blog · Sangzhuoyang Yu",
+    url: "https://www.canva.dev/blog/engineering/scaling-to-count-billions/",
     tag: "architecture",
     minutes: 11,
-    summary: "Figma's single Postgres box hit 65% CPU at peak with traffic tripling yearly — and a saturated database means the product stops. Their counterintuitive move: skip horizontal sharding, split tables into separate databases, and migrate with ~30 seconds of impact.",
-    relevance: "The decision framework matters more than the answer: they rejected NoSQL, Vitess, and NewSQL for migration risk and chose the boring option that bought years of runway. A template for the next time Ziina debates re-platforming a hot datastore versus partitioning it.",
-    readGuide: "Read 'Exploring our options' and 'Our approach to partitioning' closely — that's the decision framework. The logical-replication mechanics are skimmable unless you run Postgres migrations yourself. ~11 min.",
+    summary: "How do you count billions of monthly content-usage events accurately enough to pay creators real money, when your MySQL pipeline doubles in storage every 8–10 months and every fix means hand-editing broken database rows? Canva's answer was to abandon incremental OLTP counting for end-to-end recomputation on an OLAP warehouse.",
+    relevance: "This is a clinic in evolving a money-critical data pipeline under exponential growth — directly analogous to Ziina computing balances, transaction counts, or payout aggregates where accuracy is non-negotiable. The core lesson, that fixing code is easier than fixing broken data, applies to any financial ledger or analytics system.",
+    readGuide: "Read 'Start with MySQL' (the three pain points) and 'Simplify using OLAP and ELT' deeply — that's the 80/20 of the architectural argument. Skim the DynamoDB detour and the closing challenges. Don't miss the outer-join recompute table, the cleverest idea in the piece. ~11 min.",
     brief: [
-      "Setup: one big RDS Postgres held nearly all metadata; traffic grows ~3x annually. Tactical fixes first — max instance size, read replicas, new DBs for new use cases, PgBouncer pooling — bought roughly a year.",
-      "Horizontal sharding was rejected deliberately: NoSQL/Vitess meant complex double-write migrations and app rewrites, managed NewSQL meant being the largest single-cluster guinea pig. Vertical partitioning — moving groups of tables to their own databases — gave short-term relief and a path to shard later.",
-      "Table selection ran on two axes: impact (measured as average active sessions, sampled from pg_stat_activity every 10ms) and isolation — moving tables costs you joins, foreign keys, and atomic transactions with what's left behind, so weakly-coupled table groups win.",
-      "Ruby + ActiveRecord made static analysis hopeless, so they built runtime validators that streamed real query/transaction-to-table mappings into Snowflake to find consistently co-queried groups.",
-      "Migration trick worth stealing: logical replication's initial copy was slow because Postgres updates indexes row-by-row — dropping destination indexes and rebuilding after the copy turned days into hours. Reverse replication gave them a rollback path.",
-      "Results: cutover in seconds (~2% of requests dropped for ~30s), repeated up to a 50-table operation, largest partition now idling at ~10% CPU — plus tooling and a routing service that set up the later horizontal-sharding work."
+      "The problem: usage of creator content doubles every 18 months, and Canva now pays creators on billions of usages monthly, so the counting service must be accurate (no over/undercounting), scalable, and operable.",
+      "The original MySQL design used a single-threaded sequential scan with a pointer, but processing each record cost at least one DB round trip (one read + one write), making a full pass O(N) in database queries; batching only changes the constant, not the order.",
+      "Operational pain dominated: incidents (overcounting, undercounting, misclassification, delay) required engineers to manually pause the pipeline and surgically repair rows across dedup and aggregation tables, often taking days with multiple engineers cross-verifying.",
+      "Storage didn't scale either — MySQL RDS doesn't horizontally partition itself, so they doubled instance size roughly every 8–10 months; a DynamoDB migration was rejected because it fixed storage but not the round-trip processing bottleneck.",
+      "The redesign moved to an OLAP warehouse (Snowflake) with an ELT pipeline using DBT, where dedup and aggregation become SQL GROUP BY queries with intermediate results materialized as views — cutting full aggregation of billions of records to minutes and end-to-end latency from over a day to under an hour.",
+      "Reliability came from end-to-end recomputation: an aggregation step outer-joins new results against prior ones and overwrites differences, so most incidents are fixed by rerunning the pipeline rather than hand-editing data — eliminating thousands of lines of code and over 50% of stored data, with incidents dropping to once every few months."
     ]
   },
   {
-    id: 'discord-trillions-scylla',
-    title: "How Discord Stores Trillions of Messages",
-    source: "Discord Engineering · Bo Ingram",
-    url: "https://discord.com/blog/how-discord-stores-trillions-of-messages",
+    id: 'cloudflare-nov-2025-outage',
+    title: "Cloudflare outage on November 18, 2025",
+    source: "The Cloudflare Blog · Matthew Prince",
+    url: "https://blog.cloudflare.com/18-november-2025-outage/",
     tag: "architecture",
     minutes: 12,
-    summary: "Discord's 177-node Cassandra cluster was a 'high-toil' system: hot partitions, GC-pause firefights, weekend incidents. The fix wasn't just swapping databases — it was a Rust services layer that changed how traffic reaches the database at all.",
-    relevance: "The lesson for any hot datastore behind Ziina-scale traffic: a new database alone rarely saves you. Request coalescing plus consistent-hash routing — collapsing concurrent identical reads into one query — is the transferable pattern, whatever your storage engine.",
-    readGuide: "Skim the Cassandra-history opening; slow down at 'Data Services Serving Data' — the coalescing design is the heart — then enjoy the migration war story. ~12 min.",
+    summary: "How does a single innocuous database-permissions change cascade into Cloudflare's worst outage since 2019, taking down core traffic worldwide? This post-mortem traces the exact chain — a doubled config file, a fixed-size memory limit, and an unhandled panic — and the resilience assumptions that failed.",
+    relevance: "A masterclass in how internally-generated config (not user input) can be the trigger that takes down a payments path. For Raafay at Ziina, the lessons on validating machine-generated data, fail-open vs fail-closed defaults, blast-radius containment, and avoiding circular dependencies in your auth/login flow map directly to fintech reliability design.",
+    readGuide: "Read the intro and 'How Cloudflare processes requests' deeply for the architecture and failure chain; skim the ClickHouse query-behaviour section unless you want the exact root cause. Don't skip 'Memory preallocation' and 'Remediation' — that's the 80/20 on the design lessons. ~12 min.",
     brief: [
-      "By 2022: 177 Cassandra nodes, trillions of messages, unpredictable latency. Root causes: read-heavy hot partitions (one busy channel hammers one partition), compaction backlogs forcing a node-juggling 'gossip dance', and JVM GC pauses bad enough to need manual node reboots.",
-      "ScyllaDB — Cassandra-compatible, C++, no garbage collector, shard-per-core isolation — had already taken every other Discord database by 2020. Messages waited until the ScyllaDB team fixed reverse-query performance, the last blocker.",
-      "Key insight: don't just swap the database, shield it. They built Rust 'data services' between the API monolith and storage — roughly one gRPC endpoint per query, zero business logic.",
-      "The flagship feature is request coalescing: the first request for a row spins up a worker task, concurrent identical requests subscribe to it, and the database sees one query. Consistent hash-based routing by channel ID sends same-channel traffic to the same instance to maximize coalescing.",
-      "The migration: ScyllaDB's Spark migrator estimated three months, so they extended their own Rust library in an afternoon — new estimate nine days. It ran at up to 3.2 million messages/second, then stalled at 99.9999% on a range of uncompacted tombstones; one compaction later, done.",
-      "Aftermath: 177 Cassandra nodes became 72 ScyllaDB nodes; historical-read p99 fell from 40–125ms to a steady 15ms, inserts from 5–70ms to 5ms — enough headroom that World Cup traffic spikes became a dashboard curiosity, not an incident."
+      "Root cause was not an attack but a ClickHouse permissions change at 11:05 UTC that made implicit table grants explicit; an unfiltered system.columns query then returned duplicate rows from the r0 database, more than doubling the size of the Bot Management 'feature file.'",
+      "The proxy preallocated memory for a hard limit of 200 ML features (against ~60 in use); the oversized file blew past it, and FL2's Rust code hit Result::unwrap() on an Err, panicking the worker thread and returning HTTP 5xx for all bot-dependent traffic.",
+      "The file regenerated every 5 minutes, and only ClickHouse nodes already updated produced bad output — so the system oscillated between healthy and failing, which initially misled engineers into suspecting a hyperscale DDoS attack (a coincidental status-page outage reinforced that wrong hypothesis).",
+      "Blast radius spread by service coupling, not just geography: Workers KV, Access, Turnstile, and the dashboard all failed because they depend on the core proxy — and because Turnstile gates dashboard login, locked-out customers couldn't log in to fix anything (a circular dependency at the worst moment).",
+      "Old proxy (FL) failed differently from new (FL2): instead of 5xx it scored all traffic as bot-zero, causing mass false-positive blocks for customers using bot scores — a reminder that 'degraded but up' can be as damaging as a hard error.",
+      "Key design takeaways: treat Cloudflare-generated config with the same input-validation rigor as user input, add global feature kill switches, prefer sane validated defaults over panicking (fail-open where safe), and review failure modes across every proxy module — the foundation of their follow-up 'Code Orange: Fail Small' program."
     ]
   },
   {
-    id: 'cncf-k8s-hard-lessons',
-    title: "Top 5 Hard-Earned Lessons from the Experts on Managing Kubernetes",
-    source: "CNCF Blog · Stevie Caldwell (Fairwinds)",
-    url: "https://www.cncf.io/blog/2025/11/18/top-5-hard-earned-lessons-from-the-experts-on-managing-kubernetes/",
+    id: 'tinybird-eks-karpenter-spot',
+    title: "Cut AWS costs by 20% while scaling with EKS, Karpenter, and Spot",
+    source: "Tinybird · Luis Rodríguez (Head of Infrastructure)",
+    url: "https://www.tinybird.co/blog/how-we-cut-aws-costs-while-scaling-faster-with-eks-karpenter-and-spot-instances",
     tag: "kubernetes",
-    minutes: 9,
-    summary: "Spinning up a cluster takes minutes; what nobody advertises is everything after. From years of running other people's clusters: the operational overhead, insecure defaults, autoscaling bill shocks, and upgrade debt that actually sink Kubernetes teams.",
-    relevance: "A checklist generator for your k8s learning: for each lesson, ask how Ziina's platform handles it — who owns RBAC, are namespaces actually network-isolated, what bounds the autoscaler, and how far behind upstream are your clusters right now?",
-    readGuide: "Headline-skim lessons 1 and 4 (overhead, hiring); read lessons 2, 3, and 5 deeply — security defaults, scaling costs, upgrade debt — plus the policy-engine bonus at the end. ~9 min.",
+    minutes: 11,
+    summary: "How do you scale EKS clusters for billion-row ingestion spikes without drowning in NodeGroup sprawl or runaway AWS bills? Tinybird's infra lead walks through replacing Cluster Autoscaler with Karpenter plus Spot, cutting their bill 20% overall (90% on CI/CD) while making scaling fully automatic.",
+    relevance: "This is the exact stack a fintech platform team faces: bursty payment/event traffic, cheap Spot capacity for stateless services, and strict isolation for stateful workloads that can't tolerate interruption. The dual-NodePool + taint pattern and KEDA-on-real-time-metrics approach map directly to how Ziina would scale wallet and P2P workloads cost-efficiently.",
+    readGuide: "Read 'Inside our EKS clusters' and 'Consolidations' closely (~6 min) — that's the 80/20: the two-NodePool split, the three Karpenter settings, and the disruption-safety checklist. Skim the intro and conclusion; study the YAML if you want the concrete config. ~11 min.",
     brief: [
-      "Managed providers make cluster creation easy, but production means owning the hidden add-ons: DNS, CNI, storage, monitoring, secrets, logging. Every abstraction layer you add for developer self-service makes debugging harder for the developers it serves — balance usability against transparency.",
-      "Defaults are almost never secure: built-in cluster roles get overprovisioned because RBAC objects are confusing, and Kubernetes has no built-in IAM (cloud integrations like AWS IRSA help). Namespaces give logical isolation only — real separation needs explicit NetworkPolicies and a CNI that enforces them.",
-      "Scan your images: they're built from layers of other images, and many orgs still pull from public registries unvalidated. Track provenance — where it's built, who maintains it.",
-      "Autoscaling's two traps: unbounded node autoscalers (Karpenter picking oversized instances = celebrating availability while the bill explodes) and HPA on CPU/memory when real apps bottleneck on requests-per-second or queue depth. Custom metrics cost more effort and scale far more accurately.",
-      "Tech debt compounds on two clocks: core upgrades (stay N+1; three releases/year; breaking changes like Ingress → Gateway API) and the ecosystem shifting under you (SOPS-in-Git giving way to External Secrets Operators). Deferring upgrades until a CVE forces a multi-version jump is the classic failure.",
-      "Two bonus rules: not every workload belongs on Kubernetes — a blog or one-off batch job doesn't justify the complexity — and enable a policy engine (OPA/Gatekeeper, Kyverno, or Polaris) from day one, because retrofitting policies onto running workloads breaks them and breeds resistance."
+      "They abandoned Cluster Autoscaler because it forced one NodeGroup per instance-type/AZ/architecture combo; with 5-6 instance types, 3 AZs, x86+Graviton, and 5 regions they hit hundreds of NodeGroups to hand-maintain. Karpenter replaces all of that with intent-based policies ('use c/m/r families, prefer Spot, avoid old generations').",
+      "They run two logical NodePools: a tainted On-Demand pool for stateful/critical workloads (databases, CoreDNS, Prometheus, EBS-CSI, ALB-controller, covered by Savings Plans) and a Spot-only pool for stateless services with automatic On-Demand fallback — the core cost/stability trade-off.",
+      "Counterintuitive lesson: do NOT restrict Karpenter to the newest instance generations (r7/m7) — giving it a broad range of families and types is what lets it optimize cost and Spot availability.",
+      "Safe node consolidation requires three things or you get 5xx errors and micro-downtime: graceful shutdowns, PodDisruptionBudgets, and TopologySpreadConstraints across AZs; Disruption Budgets pause consolidation during peak windows, and nodes expire every 24-48h for patching and memory-leak mitigation.",
+      "Horizontal pod scaling uses KEDA (70+ scalers) reading real-time metrics directly from Tinybird in Prometheus format rather than Prometheus/Grafana, because faster metrics mean faster reaction to traffic spikes.",
+      "Operational details that cut node-to-ready time by ~2 minutes: run the Karpenter controller on AWS Fargate (never on nodes it manages, to avoid a self-disruption deadlock), cache images locally via Harbor with a Kyverno policy rewriting ECR DNS, and use BottleRocket AMIs for faster boots and a smaller attack surface."
     ]
   }
 ];
@@ -572,46 +572,47 @@ var TODAYS_ARTICLES = [
 // GROWTH_START
 var GROWTH_PICKS = [
   {
-    id: 'aherring-dichotomy-control',
-    title: "The Stoic Dichotomy of Control, and an Anatomy of Thought",
-    source: "aherring.me · engineer's stoicism notebook",
-    url: "https://aherring.me/dichotomy-of-control",
+    id: 'responsibility-and-response',
+    title: "Responsibility and Response: Why Our Choices are the Only Thing that Matters",
+    source: "Daily Stoic · Stephen Hanselman",
+    url: "https://dailystoic.com/responsibility-and-response/",
     tag: "philosophy",
     minutes: 7,
-    summary: "Epictetus called it the chief task in life: separating what you control from what you don't. This essay turns that one distinction into a working algorithm — for goals, emotions, and the daily review — rather than a comfort phrase.",
-    relevance: "The goal-setting move is the practical gem: target actions, never outcomes. 'Ship the migration safely' is in your control; 'no incidents this quarter' isn't. Pairs with today's stoic prompt — try rewriting one current goal in action terms.",
-    readGuide: "Skip the Stoicism primer if you know the names; start at 'The Dichotomy of Control' and read through 'An Anatomy of Thought'. The body/goals example is the keeper. ~7 min.",
+    summary: "We burn whole days lamenting circumstances and hunting for culprits, which only distracts us from the present. The piece argues that our choices and responses are the sole leverage we hold over any outcome, and that taking 100% responsibility for them is liberating rather than burdensome.",
+    relevance: "Much of an engineer's day is reacting to things outside your control — production incidents, shifting requirements, flaky third-party payment APIs, code-review pushback. This reframes that friction: your only real lever is your response, not the event — the mindset that keeps you effective during an outage or a hard sprint.",
+    readGuide: "Short read, ~7 min. Read the opening ('telling ourselves stories' framing) and the closing two paragraphs closely — that's the 80/20. The middle is primary-source quotes; skim those and pause only on the Marcus 'cucumber / thorns' passage about getting out the broom.",
     brief: [
-      "The line is drawn at your own actions: opinions, pursuits, choices are in your control; body, property, reputation, and all outcomes are not. Most outcomes can be influenced — but only the influencing action itself is yours.",
-      "Applied to goals: don't target 'lose X pounds in Y weeks' (an outcome); target 'eat whole foods, cut soft drinks' (actions). Health itself is a 'preferred indifference' — pursue it, enjoy it, don't be wrecked when externals take it.",
-      "Emotions split the same way: feeling one isn't in your control, your response is. Negative emotions self-perpetuate by steering your thoughts — the choice point is whether to feed the loop or cut it early.",
-      "The daily practice is cheap mindfulness: replay the day's would-do-differently moments and reconstruct what you were thinking and physically feeling — tight chest, clenched fist, racing thoughts — then use those sensations as in-the-moment tripwires next time.",
-      "When a thought grips you, decompose it first-principles style and ask of each part: is this within my control? With repetition the filter goes subconscious — a mental model deliberately installed, exactly like learning to segment a debugging problem."
+      "The core distraction is mental: we spend large chunks of the day lamenting circumstances, assigning blame, or fearing the future, which pulls us away from the present tasks and decisions that are the actual substance of a good life.",
+      "It anchors on Epictetus (Discourses 2.5.4–5): the chief task in life is to separate what is an uncontrollable external from what is genuinely our own choice, and to look for good and evil only within the latter.",
+      "Marcus Aurelius's 'bitter cucumber / thorns on the path' image (Meditations 8.50) argues against pointlessly pondering nuisances — sometimes you just toss it out or step around it and get back to work, like a carpenter ignoring sawdust.",
+      "Seneca (Moral Letters 103) reframes the purpose of philosophy as cleaning up your own faults rather than railing against others' — let philosophy scrape off your own faults.",
+      "It cites Jack Canfield as a modern operationalization: take 100% responsibility, recognizing you don't control events, only responses, and that responses are your entire leverage on outcomes — a concrete bridge from ancient text to practice.",
+      "The closing move is Epictetus's 'inner citadel' (Discourses 4.1.85–87, via Pierre Hadot): fortresses fall not to iron or fire but to judgments, so guarding your own judgments is the whole game."
     ]
   },
   {
-    id: 'simonw-llms-for-code',
-    title: "Here's How I Use LLMs to Help Me Write Code",
-    source: "simonwillison.net · Simon Willison",
-    url: "https://simonwillison.net/2025/Mar/11/using-llms-for-code/",
+    id: 'debugging-attitude-matters',
+    title: "When debugging, your attitude matters",
+    source: "Julia Evans (jvns.ca) · Julia Evans",
+    url: "https://jvns.ca/blog/debugging-attitude-matters/",
     tag: "workflow",
-    minutes: 13,
-    summary: "Why do some developers get huge value from LLMs while others bounce off? Willison's answer: it's a learnable, unintuitive skill. His full playbook — mental model, context management, and a real feature built in 17 minutes for $0.61.",
-    relevance: "A calibration check for how you already use Claude or Copilot at Ziina. The two-mode split is the upgrade: open-ended 'show me options' during research, then dictatorial function-signature prompts for production code — most people get stuck between the modes.",
-    readGuide: "Read 'Context is king' through 'You have to test what it writes!' carefully — that's the method. The Claude Code colophon walkthrough is worth following prompt-by-prompt; skim the tools list. ~13 min.",
+    minutes: 6,
+    summary: "Why do competent engineers suddenly debug badly in unfamiliar territory? Evans shows that the culprit is often an attitude — 'this is too hard for me to understand' — that triggers flailing (random changes, blind googling, revert-and-retry) instead of the methodical techniques you'd normally apply.",
+    relevance: "You want to sharpen your developer workflow, and this names a failure mode you've surely hit at Ziina when dropped into an unfamiliar layer — someone else's payment service, a CSS bug, infra you don't own. The fix is cheap and repeatable: notice the defeatist attitude, then go read the actual primary docs for 5 minutes.",
+    readGuide: "Quick 6-min read. Read the opening list of three flailing behaviors and the two 'attitude' sections closely — that's the whole lesson. The CSS z-index and position:absolute examples are illustrative; skim them unless you want the payoff of how reading MDN collapsed a 'hard' problem into three rules.",
     brief: [
-      "Mental model: an over-confident pair programmer — lightning at lookups, tireless at tedium, and wrong in deeply inhuman ways. Don't let failures that would discredit a human discredit the tool; note what it can't do and re-test on new models.",
-      "Context is king: the whole conversation is the prompt, so reset chats when they sour, seed new ones with existing code, and prefer tools that show you exactly what's in context. Training cut-offs even shape his library choices — boring, well-represented tech wins.",
-      "Two distinct modes: research ('what are my options for HTTP libraries in Rust? Include examples') versus production, where he turns authoritarian — detailed function signatures, exact tech choices, 'now write the tests with pytest'. The LLM types; he designs.",
-      "The unoutsourceable part: testing. If you haven't seen it run, it isn't a working system — your job is delivering working systems, with or without a model in the loop.",
-      "Worked example: the tools.simonwillison.net colophon page, built with Claude Code in 17 minutes for $0.61 across six conversational prompts — then the human took over when GitHub Pages deploys double-fired, because experience knew where to look and prompting didn't.",
-      "The real win isn't speed, it's ambition: LLMs make projects viable that wouldn't justify the time at all. And they amplify existing expertise — 25 years of context made those prompts work; the same session on an unfamiliar stack would go very differently."
+      "Evans catches herself, an experienced debugger, doing three things she normally wouldn't while stuck on unfamiliar CSS: making random changes hoping they'll work, googling and trying snippets without understanding them, and reverting and restarting whenever something breaks.",
+      "She diagnoses the root cause not as a skill gap but as an attitude — an unusual-for-her belief that CSS was Too Hard and impossible to understand — which suppressed her usual debugging discipline.",
+      "The concrete example: a z-index that worked in Firefox but not Chrome felt impossibly complex, until she stopped the change-random-things-and-pray approach and read the MDN page on stacking order, which reduced it to three simple rules about HTML order.",
+      "The actionable reframe is 'let's learn the basics and see if that helps' — calm down, read a short authoritative doc, and check whether the problem is actually as complicated as your panic assumes (it frequently isn't).",
+      "A secondary lever: watching a colleague confidently use position:absolute/relative made it feel learnable, and a quick MDN read demystified it ('positioned relative to its closest positioned ancestor') — pairing and trusted docs both deflate the 'too hard' story.",
+      "She closes on source quality: much of her frustration came from not knowing where to find trustworthy information, leaning on random Stack Overflow answers; finding reliable references like MDN and CSS-Tricks materially improved her debugging."
     ]
   }
 ];
 // GROWTH_END
 
-var TOTAL_READ_MINUTES = 47; // refreshed by scheduler
+var TOTAL_READ_MINUTES = 54; // refreshed by scheduler
 
 // ============================================================
 // STOIC QUOTES — rotates by day of year, no refresh needed
