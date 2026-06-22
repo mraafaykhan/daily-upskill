@@ -468,98 +468,98 @@
 // ARTICLES_START
 var TODAYS_ARTICLES = [
   {
-    "id": "mt-scale-ledger-part-1",
-    "title": "How to Scale a Ledger, Part I: Why Use a Ledger Database",
-    "source": "Modern Treasury Journal · Matt McNierney",
-    "url": "https://www.moderntreasury.com/journal/how-to-scale-a-ledger-part-i",
-    "tag": "fintech",
-    "minutes": 8,
-    "summary": "Most engineers start by stashing money on their domain objects — the balance on the loan, the payout summed across bookings. This piece argues why that quietly breaks once you move money at scale, and why a double-entry ledger belongs at the source of every financial event.",
-    "relevance": "Ziina’s wallet is exactly the ‘money embedded in domain models’ trap this describes — balances and P2P transfers scattered across services. Read it as a checklist: does your ledger enforce double-entry and immutability at the source, or can attribution still silently go missing between systems?",
-    "readGuide": "~8 min, part 1 of 6 — the ‘why’, not the ‘how’. Read ‘Why Traditional Models Fail At Scale’ and ‘Core Features of a Ledger Database’ closely; the four-guarantees list is the keeper. Skim the closing sales-y bit.",
-    "brief": [
-      "Teams typically embed financial logic in domain models (price on the ride, balance on the loan). This holds until four problems hit at scale: reporting needs expand, data fragments across services, performance degrades (payout crons miss deadlines, card-auth checks lag), and failure scenarios multiply.",
-      "A ledger database is a simple core model: Accounts (discrete pools of value), Transactions (atomic monetary events), and Entries (the individual debits and credits that make up a transaction).",
-      "A scalable ledger must guarantee four things: immutability (past states always retrievable), double-entry enforcement (money can’t move without a stated source and destination), concurrency controls (no double-spend even under parallel or out-of-order writes), and efficient aggregations (fast sums over a time window).",
-      "The core pain is the ‘fintech translation problem’: product engineers speak domain (orders, rides) while finance speaks debits, credits, assets and liabilities — and events are fragmented across SaaS processors, expressed in different API languages, and generated from mutable records.",
-      "When attribution is lost the cash doesn’t leave the bank — the record of who it belongs to does. One product leader described finance finding ‘a few million dollars missing’ every month, triggering a scramble. These errors surface publicly as missing marketplace payouts, undelivered wallet transfers, or loan payments wrongly marked late.",
-      "The fix: enforce double-entry and immutability at the source of financial events, making lost money architecturally impossible — but building a performant double-entry ledger takes years and dozens of senior engineers, which is why most companies delay (and shouldn’t)."
-    ]
-  },
-  {
-    "id": "monzo-payments-safely-at-scale",
-    "title": "Processing payments safely at scale",
-    "source": "Monzo · Joost van Oorschot",
-    "url": "https://monzo.com/blog/2022/02/08/processing-payments-safely-at-scale",
+    "id": "stripe-idempotency-robust-apis",
+    "title": "Designing robust and predictable APIs with idempotency",
+    "source": "Stripe Engineering · Brandur Leach",
+    "url": "https://stripe.com/blog/idempotency",
     "tag": "fintech",
     "minutes": 7,
-    "summary": "How does a bank ship code many times a day to the hot path of its payment systems without occasionally losing someone’s money? Monzo’s answer is two controls borrowed from finance — coherence checking and reconciliation — that catch the bugs your error alerts miss.",
-    "relevance": "This is the safety net for the exact tension you live with: shipping fast on Ziina’s payment hot path. Steal both ideas — coherence checks that flag any wallet object stuck in an invalid state, and a daily reconciliation of your ledger against settlement to catch the 0.1% your alerts never fire on.",
-    "readGuide": "~7 min. Read ‘Coherence checking’ and ‘Reconciliation’ in full — they’re the whole article, both short and concrete. The opening ‘primer on risk’ is context you can skim.",
+    "summary": "Networks fail in ambiguous ways: a charge request can succeed on the server while the response never makes it back, leaving the client unsure whether retrying is safe. Stripe's answer — idempotency keys plus disciplined client retries — is the canonical recipe for moving money exactly once.",
+    "relevance": "This is the bedrock pattern under every Ziina top-up and P2P transfer. As you read, audit your own mutating endpoints: does each accept an Idempotency-Key, cache the first response, and do clients back off with jitter — or can a dropped connection still double-charge a wallet?",
+    "readGuide": "~7 min, a short timeless classic. Skim 'Planning for failure'; read 'Guaranteeing exactly once semantics' and 'Being a good distributed citizen' closely — that's the 80/20. The closing three principles are worth memorising.",
     "brief": [
-      "Monzo’s competing pressures are shipping many times a day vs. never mishandling payments. They reconcile this with a risks-and-controls process: periodically gathering as a team over architecture diagrams to enumerate every failure mode and the controls that prevent or detect it.",
-      "Beyond the usual controls (code review, automated tests, feature flags, monitoring), two less-common ones do the heavy lifting: coherence checking and reconciliation.",
-      "Coherence checks are rules that fire when an object is in an invalid state (e.g. ‘if a payment isn’t returned, an action to pay the recipient must be scheduled’). They catch issues alerting misses — a bug silently failing to schedule 0.1% of payments, or a scheduler that stops keeping up as users grow.",
-      "Monzo implements coherence checks two ways: as SQL-style models over payment state in the data warehouse, and as event-driven backend services that track each payment’s state by listening to events. Complex payment lifecycles often carry dozens of checks.",
-      "Reconciliation verifies that two different systems agree: they compare the sum of movements in their internal ledger against what actually entered or left the settlement account. A mismatch — a ‘reconciliation break’ — flags a payment that probably failed to process.",
-      "Reconciliation is the catch-all: slower (daily settlement means slower detection) but it catches anything that slips past preventative controls and coherence checks. Engineers must acknowledge each break with evidence, creating an audit log — and both patterns generalise beyond finance (e.g. reconciling two services’ views of the same data)."
+      "Any network call between two nodes has three failure modes: the connection never opens, it dies mid-operation (work left in limbo), or the operation succeeds but the response is lost. The last two are 'ambiguous' — the client can't tell whether a retry is safe.",
+      "Idempotent endpoints — callable any number of times while side effects happen only once — let a client recover from any failure with one simple rule: retry until it verifiably succeeds. HTTP's PUT and DELETE are idempotent by definition.",
+      "For operations that must happen exactly once (charging a customer), the client generates a unique idempotency key and sends it with the request; Stripe transmits this via the special Idempotency-Key header on its mutating POST endpoints.",
+      "On retry the server reconciles by key: first time seen → process normally; failed mid-operation → recover state, or safely re-run wholesale if the prior attempt was rolled back by an ACID database; response lost → reply with the cached result of the original success.",
+      "Retries must be considerate: use exponential backoff (wait grows as 2^n with each failure) so clients don't hammer a server that is already in an incident and make the degradation worse.",
+      "Add random jitter to spread retries out and avoid the 'thundering herd', where many clients — even with backoff — sync up and slam a recovering server. Stripe's own Ruby library bakes in idempotency keys, increasing backoff, and jitter."
     ]
   },
   {
-    "id": "slack-cellular-architecture",
-    "title": "Slack’s Migration to a Cellular Architecture",
-    "source": "Slack Engineering · Cooper Bethea",
-    "url": "https://slack.engineering/slacks-migration-to-a-cellular-architecture/",
+    "id": "uber-next-gen-payments-platform",
+    "title": "Engineering Uber's Next-Gen Payments Platform",
+    "source": "Uber Engineering · Dmitry Chornyi",
+    "url": "https://www.uber.com/us/en/blog/payments-platform/",
+    "tag": "fintech",
+    "minutes": 6,
+    "summary": "When Uber outgrew its old payments stack it rebuilt around four goals: high reliability via active-active, exactly-once processing through idempotency and strong consistency, auditability via double-entry bookkeeping, and the ability to add payment types and geographies fast. This is the engineering walkthrough.",
+    "relevance": "A real, large-scale instance of the exact principles Ziina's wallet needs — double-entry, idempotency, exactly-once — applied across collections and disbursements. Note how modelling money movements as immutable, asynchronously-processed orders cut new-market launch time from months to days.",
+    "readGuide": "~6 min — this is a write-up of three meetup talks rather than one deep essay, so read it as a map of topics (then chase the linked videos for depth). The 'Evolution of Payments' and 'To the Nines' sections carry the concrete engineering.",
+    "brief": [
+      "Uber's next-gen platform launched in 2017 with four design goals: high reliability through an active-active architecture, exactly-once payment processing via idempotency and strong consistency, auditability through double-entry bookkeeping, and easy scaling to new business lines, payment types and geographies.",
+      "The architecture splits into two halves — collections (money in) and disbursements (money out) — with entities, accounts, and money movements as the core data models.",
+      "Double-entry bookkeeping balances every credit against a debit, and the system is built as a loosely-coupled pipeline of asynchronous stream processing over immutable orders — which let Uber cut launch time for new lines of business in new markets from months to days.",
+      "Uber supports 10+ ways to pay (cards, Venmo, Paytm in India, iDEAL in the Netherlands); weaving a new method through its microservice architecture — e.g. integrating the Google Pay SDK — requires several layers of testing to keep the experience seamless.",
+      "On the back end, integrating new payment-service providers and banks uses patterns like storing request metadata for idempotent multiplexing and retries, and efficient generation of external IDs within limited namespaces.",
+      "Batch flows rely on deterministic batching with reliable scheduling so that batch processing itself is idempotent — the same exactly-once safety guarantees applied to bulk money movement."
+    ]
+  },
+  {
+    "id": "figma-horizontal-sharding",
+    "title": "How Figma's Databases Team Lived to Tell the Scale",
+    "source": "Figma Engineering · Sammy Steele",
+    "url": "https://www.figma.com/blog/how-figmas-databases-team-lived-to-tell-the-scale/",
     "tag": "architecture",
-    "minutes": 9,
-    "summary": "A single availability-zone network fault took down user-facing Slack even though traffic could have flowed through healthy AZs — because distributed systems are bad at detecting ‘gray’ partial failures. Slack’s fix was to stop auto-detecting and build a human-pullable ‘drain this AZ’ button.",
-    "relevance": "A blueprint for blast-radius containment you’ll want when a Ziina dependency degrades in one zone. The core lesson — a fast, human-triggered drain can beat clever automated failure detection — plus the siloing pattern is directly applicable to keeping payment services resilient to partial cloud failures.",
-    "readGuide": "~9 min, part 1 of a series (design, not deep implementation). Read ‘Background: the incident’ and ‘Our solution: AZs are cells’ closely. The four drain design goals and the Envoy/xDS mechanism are the keepers; implementation lands in later posts.",
+    "minutes": 14,
+    "summary": "Vertical partitioning bought Figma runway, but its highest write-rate table still couldn't fit on a single Postgres primary. This is the nine-month story of horizontally sharding Postgres while keeping the existing relational model and avoiding a NoSQL rewrite.",
+    "relevance": "The definitive playbook for the day a Ziina table outgrows one primary. The hard parts map straight onto payments: losing cross-shard transactions and unique constraints, and surviving 'partial commit failures' where a write lands on one shard but not another — exactly the integrity risk a wallet can't tolerate.",
+    "readGuide": "~14 min and detailed. Read 'The path to horizontal sharding' and the design-highlights list, then 'The logical solution' (Postgres views) and DBProxy's query engine. Skim the topology internals unless you're implementing. The results paragraph is the payoff.",
     "brief": [
-      "The trigger: on 2021-06-30 a single AZ’s network link in us-east-1 intermittently faulted. Even though most of Slack runs across multiple AZs in that region, the failure was user-visible — raising the question of why multi-AZ redundancy didn’t save them.",
-      "Root cause is a ‘gray failure’: components disagree on what’s healthy. One user request fans out to hundreds of RPCs, and strongly-consistent datastores (Vitess) need a single available primary per shard, so partial connectivity loss produced widespread errors that automated detection couldn’t cleanly isolate.",
-      "Rather than auto-remediate gray failures, Slack tapped human judgment: during the incident it was obvious one AZ was bad, so they built a button to drain its traffic. Design goals: drain within 5 minutes, no user-visible errors, incremental to 1% granularity, and never depend on resources inside the AZ being drained.",
-      "The mechanism is ‘siloing’: every service runs in all AZs but only talks to services within its own AZ, so each service effectively becomes N per-AZ virtual services. A failure stays contained, and draining is just redirecting user requests away from that AZ at the frontend.",
-      "Siloing concentrates the traffic-shifting work in one place — the edge load balancers — avoiding a separate implementation across Slack’s Hack/Go/Java/C++ services and its DNS/Consul/Envoy discovery systems.",
-      "Implementation uses two out-of-the-box Envoy features: weighted clusters and dynamic weight assignment via RTDS, driven by Slack’s in-house xDS control plane (Rotor). Reweighting an AZ to zero drains it gracefully in seconds at 1% granularity, and the control plane lives in other regions so it survives the failing AZ."
+      "Figma's Postgres stack grew nearly 100x since 2020. Vertical partitioning (moving table groups onto their own databases) was an easy, high-impact lever — but a stepping stone. Horizontal sharding was 'an order of magnitude more complex' and the only way to scale the highest write-rate tables.",
+      "Sharding sacrifices ACID guarantees you take for granted: foreign keys and globally-unique indexes can't be enforced by Postgres across shards, transactions span shards, and code must handle 'partial commit failures' where writes succeed on some databases and fail on others.",
+      "Key design choices: 'colos' (groups of related tables sharing a sharding key, preserving joins and transactions within one key); separating logical sharding (app layer) from physical sharding (Postgres layer); and full logical replication instead of harder filtered replication.",
+      "They represented logical shards as Postgres views (CREATE VIEW ... WHERE hash(shard_key) in a range), letting them roll out logical sharding safely and cheaply before any risky physical data move.",
+      "DBProxy intercepts SQL and routes it: a logical planner extracts shard IDs from the query, a physical planner rewrites it onto the right database. It also added load-shedding and request hedging, and works to avoid slow 'scatter-gather' queries that hit every shard.",
+      "Figma shipped its first horizontally sharded table in September 2023, failing over with only ~10 seconds of partial write availability on primaries and zero impact on replicas — and saw no latency or availability regression afterward."
     ]
   },
   {
-    "id": "cloudflare-workers-kv-redesign",
-    "title": "Redesigning Workers KV for increased availability and faster performance",
-    "source": "The Cloudflare Blog · Alex Robinson & Tyson Trautmann",
-    "url": "https://blog.cloudflare.com/rearchitecting-workers-kv-for-redundancy/",
+    "id": "cloudflare-workflows-durable-execution",
+    "title": "Build durable applications on Cloudflare Workers: you write the Workflows, we take care of the rest",
+    "source": "The Cloudflare Blog · Sid Chatterjee, Matt Silverlock & Celso Martinho",
+    "url": "https://blog.cloudflare.com/building-workflows-durable-execution-on-workers/",
     "tag": "architecture",
     "minutes": 13,
-    "summary": "On June 12, 2025 a single third-party storage provider’s outage took down Workers KV — and with it Access logins, Gateway, and WARP across Cloudflare. This post-mortem walks through re-architecting KV onto Cloudflare’s own sharded database to kill the single point of failure.",
-    "relevance": "A masterclass in removing a single point of failure and running a zero-downtime storage migration — judgment you’ll need when a Ziina datastore becomes critical-path. Note the read-your-own-write regression they caught: exactly the kind of undocumented guarantee customers depend on that breaks silently during a backend swap.",
-    "readGuide": "~13 min. Read ‘Designing the Solution’, ‘Implementing the Solution’, and ‘How KV Maintains Consistency’ closely. The CAP/PACELC framing (KV is PA/EL) and the RYOW regression story are the gems; skim the original-architecture recap if short on time.",
+    "summary": "Writing retry logic, backoffs and state persistence around every fragile API call is boilerplate nobody enjoys. Cloudflare Workflows offers 'durable execution' — multi-step apps that automatically retry, persist state, and resume after failure — and this post explains how to use it and how they built it on Workers and Durable Objects.",
+    "relevance": "Durable execution is the pattern for orchestrating multi-step money movement that must survive failures without redoing work or double-acting — the post literally warns against sending the same invoice twice. Read it asking which Ziina flows (payouts, reconciliation jobs) should be steps with their own retry policies.",
+    "readGuide": "~13 min. For just the model, read 'Workflows? Durable Execution?' and 'Durability'. For the build, read 'Engine and instance' (the game-loop design) and the Durable-Objects-per-account sharding. Skim the wrangler/observability sections.",
     "brief": [
-      "Workers KV is a global key-value store serving millions of reads/sec over hundreds of billions of objects, and it underpins critical Cloudflare products (Access auth, Pages assets). Its original 2018 design wrote to two third-party object-storage providers active-active, racing reads to whichever responded first.",
-      "Earlier in 2025 they consolidated to a single provider to cut consistency and operational complexity — accepting the risk as a temporary step. On June 12, 2025 that provider had a global outage, failing a high share of KV requests for 2+ hours and cascading to Access, Gateway, and WARP.",
-      "The redesign moves storage onto Cloudflare’s own infrastructure: a distributed database (the same one behind R2 and Durable Objects), sharded across multiple clusters with three-way replication. Multiple clusters keep the blast radius small. KV’s traffic is dominated by tiny objects — 288-byte median — so a database beats object storage on cost and efficiency.",
-      "A new service, KV Storage Proxy (KVSP), bridges HTTP (used across the edge) to the database’s binary TCP protocol, striping namespaces across clusters via consistent hashing to avoid hotspotting. Objects too large for the DB (up to 25 MiB) are transparently routed to R2 — a hybrid storage architecture.",
-      "Rollout was incremental and reversible: background writes first, then copy existing data, reaching a state where they could fail over in minutes; then per-namespace active-active starting with internal services, dialing traffic up slowly while comparing both backends asynchronously after the user already had a response.",
-      "They caught a read-your-own-write consistency regression (an undocumented behaviour customers relied on) and built an adversarial test framework rapidly interleaving reads and writes to measure it before fixing cache population/invalidation. Result: p99 internal read latency under 5ms vs ~80ms p50 / 200ms p99 against the third-party store. KV explicitly favours availability and latency over consistency (AP, and PA/EL under PACELC), converging via version timestamps, tombstones, and background crawlers."
+      "The core building block is the step: an individually retriable unit that can emit state, which is persisted even if later steps fail — so an app resumes from the last good step instead of restarting and redoing expensive work (like re-hitting a rate-limited API).",
+      "Each step.do() can define its own retry strategy (limit, delay, exponential backoff, timeout). A Workflow can have hundreds of steps, and one of the 'Rules of Workflows' is to wrap every API call or stateful action in its own step.",
+      "It's built entirely on Cloudflare's own platform: each account gets a single SQLite-backed Durable Object (the Account Controller), giving per-account sharding so a bug or inconsistency is confined to one account, and Durable Objects run close to the user.",
+      "Rather than a state machine (which needs an ahead-of-time build step), they model the Engine as a game loop: iterate every step, return the memoized cache if it already ran, otherwise keep running — looping until the last step completes.",
+      "Durability works because steps are stateful and idempotent: on failure the Engine re-runs, resumes from the last recorded step, and deterministically recomputes state from cached step responses — so it won't, for example, send the same invoice twice.",
+      "Long sleeps (step.sleep for days or months) and retries survive Durable Object eviction by combining scheduler.wait() with Durable Object alarms; every state transition persists to strongly-consistent SQLite, so an alarm rehydrates the cache and resumes the work later."
     ]
   },
   {
-    "id": "salesforce-karpenter-1000-clusters",
-    "title": "How Salesforce migrated from Cluster Autoscaler to Karpenter across 1,000 EKS clusters",
-    "source": "AWS Architecture Blog · Salesforce K8s Platform team",
-    "url": "https://aws.amazon.com/blogs/architecture/how-salesforce-migrated-from-cluster-autoscaler-to-karpenter-across-their-fleet-of-1000-eks-clusters/",
+    "id": "cncf-ai-converging-kubernetes",
+    "title": "The Great Migration: Why Every AI Platform Is Converging on Kubernetes",
+    "source": "CNCF Blog · Vara Bonthu (AWS)",
+    "url": "https://www.cncf.io/blog/2026/03/05/the-great-migration-why-every-ai-platform-is-converging-on-kubernetes/",
     "tag": "kubernetes",
-    "minutes": 11,
-    "summary": "How do you swap the autoscaler under 1,000+ production Kubernetes clusters — 1,180 node pools of wildly different configs — without anyone noticing? Salesforce’s platform team replaced Cluster Autoscaler with Karpenter using custom tooling, a phased rollout, and a hard-won list of gotchas.",
-    "relevance": "Production Kubernetes at a scale and reliability bar that maps onto fintech, and exactly the fleet-wide migration you’re learning to reason about. The gotchas — misconfigured PDBs blocking node replacement, the 63-character label limit, bin-packing killing single-replica pods — are the operational knowledge tutorials never mention.",
-    "readGuide": "~11 min, Jan 2026. Skim the ‘why migrate’ motivation; read ‘Key insights from the migration’ deeply — the five gotchas (PDBs, sequential cordoning, label limits, singleton pods, storage mappings) are the 80/20 and the real reason to read this.",
+    "minutes": 10,
+    "summary": "When Kubernetes launched, the pitch was simple: run containers easily. By 2026, 82% of container users run it in production and two-thirds of orgs serving generative AI use it for inference. This piece argues the industry is converging on Kubernetes as the single substrate for data, training, inference and agents.",
+    "relevance": "A fast map of where production Kubernetes is heading and the vocabulary that now matters — gang scheduling, Karpenter, DRA, multi-cluster. Even at a fintech the operational patterns (quota fairness, scale-to-zero, blast-radius via many clusters) are the same ones you'll reason about as you level up.",
+    "readGuide": "~10 min, a landscape/trends piece (named projects, not one migration). Read the 'Three eras' framing and the Training and Serving sections for the concepts; skim the agentic and 'what's next' sections unless that's your area. Treat the project names as a reading list.",
     "brief": [
-      "Salesforce runs 1,000+ EKS clusters serving thousands of internal tenants. Their old Auto Scaling group + Cluster Autoscaler setup had sprawled into thousands of node groups, caused multi-minute scaling delays during spikes, stranded resources via poor bin-packing, and balanced AZs badly.",
-      "They migrated to Karpenter (an open-source, AWS-built provisioner that creates right-sized nodes directly from pending pods). A manual migration was infeasible at this scale, so they built an in-house transition tool with zero-disruption cordon/drain respecting pod disruption budgets, reverse-transition rollback, and CI/CD integration.",
-      "Rollout was deliberately phased from mid-2025 to early 2026: lowest-risk environments first with soak times between stages, highest-stakes production last — learning and adapting to avoid large-scale regressions.",
-      "Gotchas, part 1: overly restrictive or misconfigured PodDisruptionBudgets blocked node replacements (fixed with Open Policy Agent validation); and cordoning nodes in parallel caused cluster-health issues, so they switched to sequential cordoning with manual verification checkpoints.",
-      "Gotchas, part 2: legacy human-friendly names exceeded Kubernetes’ 63-character label limit, breaking Karpenter’s label-dependent ops; Karpenter’s aggressive bin-packing and consolidation disrupted single-replica pods (needing guaranteed-pod-lifetime and workload-aware disruption policies); and incomplete ephemeral-storage configs required precise 1:1 mapping from ASG volumes to EC2NodeClass.",
-      "Results: thousands of node groups eliminated, manual operational overhead cut 80% through automation and self-service, scaling latency dropped from minutes to seconds, and 5% cost savings in FY2026 (another 5–10% projected for FY2027) from better bin-packing and less idle capacity."
+      "Per the January 2026 CNCF survey, 82% of container users run Kubernetes in production and 66% of orgs hosting generative AI models use it for some or all inference — the conversation has shifted from stateless web apps to data processing, training, inference and agents.",
+      "The author frames three eras on one platform: microservices (2015–2020), data + GenAI (2020–2024), and the agentic era (2025+) where workloads become long-running reasoning loops rather than request/response.",
+      "Distributed training made gang scheduling table stakes: jobs start only when all requested resources are free (Volcano, Apache YuniKorn), with Kueue emerging as the standard for quota, fair-share and multi-tenant GPU management. Request 120 GPUs with only 100 free and those 100 sit idle, burning money.",
+      "Inference is online, latency-sensitive and cost-critical: vLLM and SGLang (PagedAttention, continuous batching) plus KServe (autoscaling, versioning, traffic splitting) and Knative scale-to-zero for GPU workloads.",
+      "GPU economics dominate: MIG, time-slicing, MPS and Kubernetes Dynamic Resource Allocation (DRA) share GPUs, while Karpenter provisions exact node types and aggressively deprovisions idle capacity.",
+      "At ultra-scale the control plane itself bends: standard etcd becomes a bottleneck at 100k+ nodes (etcd v3.6 cut memory 50%), pushing teams toward multi-cluster scheduling (e.g. Armada) treating hundreds of clusters as one resource pool, plus a new CNCF 'AI conformance' effort for portability."
     ]
   }
 ];
@@ -573,47 +573,47 @@ var TODAYS_ARTICLES = [
 // GROWTH_START
 var GROWTH_PICKS = [
   {
-    "id": "seidl-control-what-you-can-control",
-    "title": "Control what you can control",
-    "source": "Richard Seidl · Software Testing Unleashed",
-    "url": "https://www.richard-seidl.com/en/podcast/stoicism-software-engineering/",
+    "id": "method-stoic-software-development",
+    "title": "A Stoic Look at Software Development",
+    "source": "Method · Insights",
+    "url": "https://www.method.com/insights/stoic-look-at-software-development/",
     "tag": "philosophy",
-    "minutes": 8,
-    "summary": "The agile obsession with outcomes is, this piece argues, a philosophical mistake. Drawing on Stoicism, it makes the case that outcomes are mostly outside your control — so the honest thing to judge, in product and engineering work, is the quality of your decisions, not how they happened to land.",
-    "relevance": "A direct antidote to judging yourself by whether a launch or a risky refactor ‘worked out’. The decision-log idea — record how you decided, not how it turned out — is a concrete practice you can start this week to stop rewarding luck and start improving judgment on Ziina’s hard calls.",
-    "readGuide": "~8 min (a podcast episode written up as an essay). The Key Takeaways box up top is a genuine 60-second summary. Read ‘Stop judging decisions by how they turned out’ and ‘Decide with the 10-10-10 rule’ closely.",
+    "minutes": 9,
+    "summary": "Stoicism has quietly permeated software culture — and this essay pulls quotes from Marcus Aurelius, Epictetus and Seneca and maps each to a concrete engineering practice, from blameless deployments to measuring before you change.",
+    "relevance": "A calm reframing for the parts of the job you can't control — a region outage, someone's opinion of your tech choice — and the parts you can: your tests, your kindness in review, your next small step. The 'measure before you change' discipline is directly usable on Ziina's performance work.",
+    "readGuide": "~9 min, an easy read built around quotes. The opening four-point gloss on Marcus Aurelius 8.7 is the whole philosophy in miniature; then skim to the 'Psychological Safety' and 'Work/Life Balance' sections, which carry the most actionable engineering advice.",
     "brief": [
-      "Stoicism rests on one distinction: most things — other people’s opinions, your health, how a launch lands — lie outside your control; the only territory you own is your own mind, perception and judgment. For software teams that means shifting attention from outcomes (clicks, adoption, revenue) to how you decide and act.",
-      "The central error is ‘resulting’ (a term from Annie Duke’s Thinking in Bets): judging a decision by its outcome. Quitting to join a startup is called brilliant if it’s later acquired and reckless if it goes bankrupt — but the decision was identical; only the noisy, luck-laden outcome changed.",
-      "The fix is to judge decision quality instead: the information you had, the reasoning you used, the conditions under which you chose — an uncomfortable shift for outcome-focused agile practitioners, but a more honest measure.",
-      "Premeditatio malorum (the deliberate anticipation of what could go wrong) is reframed as readiness, not pessimism — and maps onto scenario planning and a tester’s instinct to plan the unhappy path, not just the happy one.",
-      "The 10-10-10 rule weighs a choice across three horizons — what it means in 10 minutes, 10 months, and 10 years — so sprint-sized short-term thinking can’t crowd out the long arc. Pair it with temperance: default to no on a tempting experiment unless there’s a real reason for yes (do we need to, do we have to, do we have to do it now?).",
-      "Keep a decision log, not an outcome log: record the conditions and reasoning behind choices so you can separate good decisions from lucky outcomes — echoing Marcus Aurelius’s Meditations, itself a private journal of how he wanted to conduct himself."
+      "Stoicism reduces to three tenets — you will die (so time matters), you control only your own mind (not external events), and obstacles are the path — drawn from Marcus Aurelius, Epictetus and Seneca.",
+      "Meditations 8.7 maps to four engineering habits: start where you are and measure before changing; don't cut corners (write tests, mentor); focus only on what's in your power (not a stranger's take on your stack, or a us-east-1 outage); and adapt as things come — the essence of Agile.",
+      "'We don't abandon our pursuits because we despair of perfecting them' (Epictetus): software is never done, there's always tech debt — make small incremental changes and don't let perfect be the enemy of good.",
+      "Psychological safety as Stoic practice: teams that deploy in fear of blame are unhealthy. Expect failure, assume everyone did their best with the tools they had, find the root cause without blaming, and make deployment easy so it grows safer over time.",
+      "Measure before you change: 'the app is slow, let's cache' and 'velocity is slow, let's add developers' are self-deception unless you quantify first, make the change, then measure again to know it actually improved.",
+      "Ask for help without shame — impostor syndrome is 'a paper monster' — and keep work in proportion (Seneca on the lawyer dying at court): your job is not the most important thing in your life."
     ]
   },
   {
-    "id": "jvns-modern-terminal-setup",
-    "title": "What’s involved in getting a ‘modern’ terminal setup?",
-    "source": "Julia Evans (jvns.ca)",
-    "url": "https://jvns.ca/blog/2025/01/11/getting-a-modern-terminal-setup/",
+    "id": "github-octoverse-2025-workflow",
+    "title": "What 986 Million Code Pushes Say About the Developer Workflow in 2025",
+    "source": "The GitHub Blog · Cassidy Williams",
+    "url": "https://github.blog/news-insights/octoverse/what-986-million-code-pushes-say-about-the-developer-workflow-in-2025/",
     "tag": "workflow",
-    "minutes": 7,
-    "summary": "A reader wished a ‘modern’ terminal experience just came out of the box. Evans starts to explain how easy it is — and the ‘you just need to…’ list keeps growing, becoming an honest map of why a comfortable terminal is genuinely hard to assemble, and how she’d do it with minimal config.",
-    "relevance": "Practical fuel for sharpening your daily driver. Borrow her minimal-config recipe (fish, any 24-bit-colour emulator, a slowly-grown editor config) and the ‘change things slowly’ rule next time you touch your dotfiles — small reversible changes beat a big-bang setup you can’t debug.",
-    "readGuide": "~7 min, breezy. Read ‘what is a modern terminal experience’ and ‘how I achieve a modern experience’ for the concrete recipe, plus ‘change things slowly’ for the meta-lesson. The three ‘issues’ sections are skimmable examples.",
+    "minutes": 5,
+    "summary": "Nearly a billion commits — 986 million — were pushed to GitHub last year, and the data shows it's not just that we code faster but that how we ship has structurally changed. The quarterly-release era is over; constant small iteration is the new default.",
+    "relevance": "A mirror for your own workflow at Ziina: if reviews stall on giant PRs or releases wait on edge cases, you're working against the grain. Steal the concrete moves — smaller single-purpose PRs, feature flags as a core shipping tool, CI/CD on every push — to ship payment changes more safely and faster.",
+    "readGuide": "~5 min, breezy and opinion-led. Read 'Iteration is the default state' and 'Shipping looks different now' for the substance (those four bullets are the takeaways); the communication and closing sections are the author's forecast and skimmable.",
     "brief": [
-      "A ‘modern’ terminal experience is really a bundle of small features split across the shell, terminal emulator and text editor: multiline paste (pasting 3 commands shouldn’t run them), effectively infinite shell history, a prompt with current dir + git branch, 24-bit colour, vim-to-OS clipboard integration, command-specific autocomplete, and self-healing from garbled escape codes.",
-      "Evans’ own minimal recipe: use fish and barely configure it (just set EDITOR and alias ls --color=auto); any terminal emulator with 24-bit colour; neovim with a config grown slowly over ~9 years; and the base16 framework to theme everything consistently.",
-      "For a good experience with minimal config she suggests fish or zsh+oh-my-zsh, any 24-bit-colour emulator (kitty, alacritty, wezterm, ghostty, iTerm — not Terminal.app), and out-of-the-box editors like micro or helix where Ctrl-C/V/A just work.",
-      "Two structural reasons it’s hard: bash/zsh defaults are poor (bash stores only 500 history lines, no git completion by default, frustrating tab completion), and terminal editors force a choice between years of vim/emacs investment, limited nano, or less-mainstream micro/helix.",
-      "A third drag is individual apps: macOS’s system sqlite3 lacks Ctrl+Left because Apple won’t ship GNU readline — the fix was installing sqlite from Homebrew and adjusting PATH. Often these one-offs aren’t worth the hours; using newer tools (htop over top, eza over ls) sidesteps some of it.",
-      "The meta-lesson: everything affects everything else (adopting tmux forced her to rethink how she manages colours), so change config slowly in small reversible steps — her setup took ~20 years — because big simultaneous changes make breakage impossible to diagnose."
+      "The scale: developers created 230+ repositories per minute and pushed 986 million commits last year — and it reads as a durable shift toward constant iteration, not a temporary spike.",
+      "Big quarterly releases are fading; lightweight, frequent commits are the norm. Smaller changes are easier to review, debug and roll back — so 'done' is treated as temporary rather than a giant finished chunk.",
+      "Feature flags have moved from A/B-testing niche to a core shipping mechanism: push incomplete work to prod behind a toggle, watch how it behaves, and flip it off instantly if it misbehaves — without holding up the release for edge cases.",
+      "CI/CD now runs everything automatically on every push (tests, builds, artifacts, security scans, deploy); manual deploys are increasingly rare. Teams burned 11.5 billion GitHub Actions minutes on tests last year, a 35% increase.",
+      "Pull requests are getting shorter and single-purpose — 'not novels anymore' — which lowers review overhead and, counterintuitively, increases overall speed.",
+      "The author predicts communication follows the code: shorter or async standups, status living in issues rather than meetings, and specs moving closer to code via Markdown-to-code workflows — though 'AI fatigue' will cull tools that add friction."
     ]
   }
 ];
 // GROWTH_END
 
-var TOTAL_READ_MINUTES = 48; // refreshed by scheduler
+var TOTAL_READ_MINUTES = 50; // refreshed by scheduler
 
 // ============================================================
 // STOIC QUOTES — rotates by day of year, no refresh needed
