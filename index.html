@@ -468,98 +468,98 @@
 // ARTICLES_START
 var TODAYS_ARTICLES = [
   {
-    "id": "stripe-idempotency-robust-apis",
-    "title": "Designing robust and predictable APIs with idempotency",
-    "source": "Stripe Engineering · Brandur Leach",
-    "url": "https://stripe.com/blog/idempotency",
+    "id": "gocardless-idempotency-keys",
+    "title": "Safely retrying API requests",
+    "source": "GoCardless Engineering · Lawrence Jones",
+    "url": "https://gocardless.com/blog/idempotency-keys/",
     "tag": "fintech",
-    "minutes": 7,
-    "summary": "Networks fail in ambiguous ways: a charge request can succeed on the server while the response never makes it back, leaving the client unsure whether retrying is safe. Stripe's answer — idempotency keys plus disciplined client retries — is the canonical recipe for moving money exactly once.",
-    "relevance": "This is the bedrock pattern under every Ziina top-up and P2P transfer. As you read, audit your own mutating endpoints: does each accept an Idempotency-Key, cache the first response, and do clients back off with jitter — or can a dropped connection still double-charge a wallet?",
-    "readGuide": "~7 min, a short timeless classic. Skim 'Planning for failure'; read 'Guaranteeing exactly once semantics' and 'Being a good distributed citizen' closely — that's the 80/20. The closing three principles are worth memorising.",
+    "minutes": 5,
+    "summary": "When a payment POST returns a 500 — or no response at all — you have no idea whether the payment was created. Retry and risk a double charge, or do nothing and risk a lost payment. Idempotency keys remove the guesswork.",
+    "relevance": "This is the exact failure mode behind every duplicate-charge bug in a wallet. As you read, check that every create endpoint in Ziina's payment path accepts an idempotency key, and that clients reuse the SAME key on retry — never a fresh one.",
+    "readGuide": "~5 min, very short. Read 'Why are they necessary?' and the request/response examples closely; note the 409 conflict behaviour and that update endpoints skip keys because they're idempotent by nature. The whole post is the 80/20.",
     "brief": [
-      "Any network call between two nodes has three failure modes: the connection never opens, it dies mid-operation (work left in limbo), or the operation succeeds but the response is lost. The last two are 'ambiguous' — the client can't tell whether a retry is safe.",
-      "Idempotent endpoints — callable any number of times while side effects happen only once — let a client recover from any failure with one simple rule: retry until it verifiably succeeds. HTTP's PUT and DELETE are idempotent by definition.",
-      "For operations that must happen exactly once (charging a customer), the client generates a unique idempotency key and sends it with the request; Stripe transmits this via the special Idempotency-Key header on its mutating POST endpoints.",
-      "On retry the server reconciles by key: first time seen → process normally; failed mid-operation → recover state, or safely re-run wholesale if the prior attempt was rolled back by an ACID database; response lost → reply with the cached result of the original success.",
-      "Retries must be considerate: use exponential backoff (wait grows as 2^n with each failure) so clients don't hammer a server that is already in an incident and make the degradation worse.",
-      "Add random jitter to spread retries out and avoid the 'thundering herd', where many clients — even with backoff — sync up and slam a recovering server. Stripe's own Ruby library bakes in idempotency keys, increasing backoff, and jitter."
+      "A POST to /payments can fail three ways: a 4xx (you know it failed), a clean 201 (you know it succeeded), or a 500 / network timeout where you have NO idea whether the payment was created — leaving you to either hope it worked or retry and risk a duplicate.",
+      "Idempotency keys solve this: a unique token sent as a request header that guarantees only one resource is ever created, no matter how many times the request is sent.",
+      "You attach the key on the creation request (e.g. Idempotency-Key: PROCESS-ME-ONCE); retrying with the same key is safe. The critical discipline is reusing the identical key on retry, not generating a new one.",
+      "If the original request already succeeded, a retry with the same key returns 409 Conflict, with an error pointing to the conflicting_resource_id — rather than creating a second payment.",
+      "GoCardless deliberately did not add idempotency keys to update endpoints, because those are idempotent by nature: cancelling the same payment twice has no adverse effect.",
+      "The post is short and foundational (a Pro API announcement), but it crisply frames the core safety pattern that every payments integration depends on."
     ]
   },
   {
-    "id": "uber-next-gen-payments-platform",
-    "title": "Engineering Uber's Next-Gen Payments Platform",
-    "source": "Uber Engineering · Dmitry Chornyi",
-    "url": "https://www.uber.com/us/en/blog/payments-platform/",
+    "id": "monzo-stand-in-payments",
+    "title": "Processing payments in Monzo Stand-in",
+    "source": "Monzo Engineering · Emma Espinosa & Sharan Moore",
+    "url": "https://monzo.com/blog/processing-payments-in-monzo-stand-in",
     "tag": "fintech",
-    "minutes": 6,
-    "summary": "When Uber outgrew its old payments stack it rebuilt around four goals: high reliability via active-active, exactly-once processing through idempotency and strong consistency, auditability via double-entry bookkeeping, and the ability to add payment types and geographies fast. This is the engineering walkthrough.",
-    "relevance": "A real, large-scale instance of the exact principles Ziina's wallet needs — double-entry, idempotency, exactly-once — applied across collections and disbursements. Note how modelling money movements as immutable, asynchronously-processed orders cut new-market launch time from months to days.",
-    "readGuide": "~6 min — this is a write-up of three meetup talks rather than one deep essay, so read it as a map of topics (then chase the linked videos for depth). The 'Evolution of Payments' and 'To the Nines' sections carry the concrete engineering.",
+    "minutes": 8,
+    "summary": "What keeps cards working when your entire primary banking platform — or even AWS — goes down? Monzo built Stand-in: a deliberately independent backup bank that processes Mastercard, Faster Payments, and Bacs, then reconciles every decision back afterwards.",
+    "relevance": "A blueprint for payments resilience in a wallet: keeping money moving during an outage without corrupting balances. Note the deliberate code duplication and the order-tolerant 'advice' sync — the same thinking applies to any fallback path you build at Ziina.",
+    "readGuide": "~8 min. Read 'How we receive payments' (the escalating edge-service routing) and the 'advice' sync section closely — that's the hard part: computing a payment's final state from decisions made on two platforms. Skim the intro.",
     "brief": [
-      "Uber's next-gen platform launched in 2017 with four design goals: high reliability through an active-active architecture, exactly-once payment processing via idempotency and strong consistency, auditability through double-entry bookkeeping, and easy scaling to new business lines, payment types and geographies.",
-      "The architecture splits into two halves — collections (money in) and disbursements (money out) — with entities, accounts, and money movements as the core data models.",
-      "Double-entry bookkeeping balances every credit against a debit, and the system is built as a loosely-coupled pipeline of asynchronous stream processing over immutable orders — which let Uber cut launch time for new lines of business in new markets from months to days.",
-      "Uber supports 10+ ways to pay (cards, Venmo, Paytm in India, iDEAL in the Netherlands); weaving a new method through its microservice architecture — e.g. integrating the Google Pay SDK — requires several layers of testing to keep the experience seamless.",
-      "On the back end, integrating new payment-service providers and banks uses patterns like storing request metadata for idempotent multiplexing and retries, and efficient generation of external IDs within limited namespaces.",
-      "Batch flows rely on deterministic batching with reliable scheduling so that batch processing itself is idempotent — the same exactly-once safety guarantees applied to bulk money movement."
+      "Monzo Stand-in is a backup bank used during rare outages of the Primary Platform. It processes card payments (Mastercard), bank transfers (Faster Payments), and direct debits/credits (Bacs), so customers keep transacting even in a major outage.",
+      "Stateless 'edge' services connect to the schemes via Monzo's own data centres. Routing to Stand-in escalates three ways: through the edge services (most common, fine-grained control), directly from the data centres (if edge is degraded), or fully bypassing the platform if AWS itself is unavailable.",
+      "For each scheme they built ENTIRELY NEW processing logic for Stand-in, deliberately sharing no common point of failure with the primary platform. Decisions are implemented as parallel 'validators' (is the card frozen, is the account open) that run concurrently for speed.",
+      "To keep the two aligned, Monzo shadow-tests a proportion of real production traffic against Stand-in, tracking the differences and investigating any drift beyond a tolerable, explainable range.",
+      "Every payment processed in Stand-in emits a 'Monzo Advice' message; the Primary Platform applies these outcomes WITHOUT re-running any decisioning — so a Stand-in decision is always the one that gets applied.",
+      "Because one payment spans multiple requests (e.g. an authorization then a reversal) and processing can switch platforms mid-lifecycle, the advice-syncing system is built to tolerate messages arriving in ANY order and to compute the correct final state from decisions made on both platforms."
     ]
   },
   {
-    "id": "figma-horizontal-sharding",
-    "title": "How Figma's Databases Team Lived to Tell the Scale",
-    "source": "Figma Engineering · Sammy Steele",
-    "url": "https://www.figma.com/blog/how-figmas-databases-team-lived-to-tell-the-scale/",
+    "id": "figma-code-layers",
+    "title": "Canvas, Meet Code: Building Figma's Code Layers",
+    "source": "Figma Engineering · Darragh Burke & Alex Kern",
+    "url": "https://www.figma.com/blog/building-figmas-code-layers/",
     "tag": "architecture",
-    "minutes": 14,
-    "summary": "Vertical partitioning bought Figma runway, but its highest write-rate table still couldn't fit on a single Postgres primary. This is the nine-month story of horizontally sharding Postgres while keeping the existing relational model and avoiding a NoSQL rewrite.",
-    "relevance": "The definitive playbook for the day a Ziina table outgrows one primary. The hard parts map straight onto payments: losing cross-shard transactions and unique constraints, and surviving 'partial commit failures' where a write lands on one shard but not another — exactly the integrity risk a wallet can't tolerate.",
-    "readGuide": "~14 min and detailed. Read 'The path to horizontal sharding' and the design-highlights list, then 'The logical solution' (Postgres views) and DBProxy's query engine. Skim the topology internals unless you're implementing. The results paragraph is the payoff.",
+    "minutes": 10,
+    "summary": "How do you put live React code on a freeform design canvas — where layers can be duplicated, resized, and edited by many people at once — without the rigid filesystem-and-git model code usually demands? Figma reconciled the two worlds.",
+    "relevance": "A masterclass in reconciling two conflicting data models and in choosing the right concurrency algorithm — judgment that transfers to any system design problem. The CRDT-vs-OT trade-off and the Eg-walker choice are worth understanding well beyond Figma.",
+    "readGuide": "~10 min. The three sections map to three problems; the collaboration section (OT vs CRDT vs Eg-walker) is the architectural heart — read it deeply. Skim the IDE/toolchain section unless web tooling interests you.",
     "brief": [
-      "Figma's Postgres stack grew nearly 100x since 2020. Vertical partitioning (moving table groups onto their own databases) was an easy, high-impact lever — but a stepping stone. Horizontal sharding was 'an order of magnitude more complex' and the only way to scale the highest write-rate tables.",
-      "Sharding sacrifices ACID guarantees you take for granted: foreign keys and globally-unique indexes can't be enforced by Postgres across shards, transactions span shards, and code must handle 'partial commit failures' where writes succeed on some databases and fail on others.",
-      "Key design choices: 'colos' (groups of related tables sharing a sharding key, preserving joins and transactions within one key); separating logical sharding (app layer) from physical sharding (Postgres layer); and full logical replication instead of harder filtered replication.",
-      "They represented logical shards as Postgres views (CREATE VIEW ... WHERE hash(shard_key) in a range), letting them roll out logical sharding safely and cheaply before any risky physical data move.",
-      "DBProxy intercepts SQL and routes it: a logical planner extracts shard IDs from the query, a physical planner rewrites it onto the right database. It also added load-shedding and request hedging, and works to avoid slow 'scatter-gather' queries that hit every shard.",
-      "Figma shipped its first horizontally sharded table in September 2023, failing over with only ~10 seconds of partial write availability on primaries and zero impact on replicas — and saw no latency or availability regression afterward."
+      "Code layers are a new layer type in Figma Sites, rendered by React, that behave like any other Figma layer — nestable, resizable, usable in components — while bringing the full power of the web (forms, shaders, APIs) onto the canvas.",
+      "Challenge one: code is a rigid filesystem tree; the canvas is freeform and spatial. Figma implemented code layers as a 'canvas primitive' where duplicating a layer forks its source (option-drag) for side-by-side comparison rather than a git branch. React was chosen because its component model and props map directly onto Figma's components and properties.",
+      "Challenge two: a real IDE on the web. They built on CodeMirror, then ran most of the toolchain (bundling, typechecking) in a Web Worker — using esbuild and Tailwind v4 with Lightning CSS, partly compiled to WebAssembly — to keep the UI responsive on large files. Imported NPM/ESM packages auto-install with no package.json.",
+      "Challenge three: multiplayer editing of large source files. Last-write-wins breaks down for code, and gets worse when AI models make simultaneous edits.",
+      "They weighed the two classic families: Operational Transformation (OT), which slows down on files with many conflicts, and CRDTs, which treat each character independently — easy merges but high memory overhead, since the whole document history must be rebuilt in memory.",
+      "The solution was Eg-walker (Event Graph Walker), a 2024 algorithm analogous to a git rebase: it represents edits as a causal DAG and only builds a temporary CRDT to resolve concurrent edits, then discards it. Result: as fast as CRDTs at merging but with OT-like minimal memory, near zero-cost in the common no-conflict case. The server reconciles edits centrally so clients stay fast."
     ]
   },
   {
-    "id": "cloudflare-workflows-durable-execution",
-    "title": "Build durable applications on Cloudflare Workers: you write the Workflows, we take care of the rest",
-    "source": "The Cloudflare Blog · Sid Chatterjee, Matt Silverlock & Celso Martinho",
-    "url": "https://blog.cloudflare.com/building-workflows-durable-execution-on-workers/",
+    "id": "canva-scaling-media",
+    "title": "From Zero to 50 Million Uploads per Day: Scaling Media at Canva",
+    "source": "Canva Engineering · Jacky Chen & Robert Sharp",
+    "url": "https://www.canva.dev/blog/engineering/from-zero-to-50-million-uploads-per-day-scaling-media-at-canva/",
     "tag": "architecture",
-    "minutes": 13,
-    "summary": "Writing retry logic, backoffs and state persistence around every fragile API call is boilerplate nobody enjoys. Cloudflare Workflows offers 'durable execution' — multi-step apps that automatically retry, persist state, and resume after failure — and this post explains how to use it and how they built it on Workers and Durable Objects.",
-    "relevance": "Durable execution is the pattern for orchestrating multi-step money movement that must survive failures without redoing work or double-acting — the post literally warns against sending the same invoice twice. Read it asking which Ziina flows (payouts, reconciliation jobs) should be steps with their own retry policies.",
-    "readGuide": "~13 min. For just the model, read 'Workflows? Durable Execution?' and 'Durability'. For the build, read 'Engine and instance' (the game-loop design) and the Durable-Objects-per-account sharding. Skim the wrangler/observability sections.",
+    "minutes": 11,
+    "summary": "Canva's media service started as a thin layer over MySQL on RDS. As media approached a billion rows, schema migrations took six weeks and table files hit hard size limits. This is the live, zero-downtime migration to DynamoDB.",
+    "relevance": "The playbook for migrating a hot, growing datastore without downtime — directly relevant as Ziina's tables scale. Note the access-pattern-first strategy, the SQS-queue replication with dual reads for verification, and the feature-flag instant rollback.",
+    "readGuide": "~11 min. Read 'MySQL Growing Pains' (the concrete limits they hit), 'Migrating Live' (the SQS priority-queue replication), and 'Lessons learned'. The honest 'Was DynamoDB the right choice?' retrospective is worth the time.",
     "brief": [
-      "The core building block is the step: an individually retriable unit that can emit state, which is persisted even if later steps fail — so an app resumes from the last good step instead of restarting and redoing expensive work (like re-hitting a rate-limited API).",
-      "Each step.do() can define its own retry strategy (limit, delay, exponential backoff, timeout). A Workflow can have hundreds of steps, and one of the 'Rules of Workflows' is to wrap every API call or stateful action in its own step.",
-      "It's built entirely on Cloudflare's own platform: each account gets a single SQLite-backed Durable Object (the Account Controller), giving per-account sharding so a bug or inconsistency is confined to one account, and Durable Objects run close to the user.",
-      "Rather than a state machine (which needs an ahead-of-time build step), they model the Engine as a game loop: iterate every step, return the memoized cache if it already ran, otherwise keep running — looping until the last step completes.",
-      "Durability works because steps are stateful and idempotent: on failure the Engine re-runs, resumes from the last recorded step, and deterministically recomputes state from cached step responses — so it won't, for example, send the same invoice twice.",
-      "Long sleeps (step.sleep for days or months) and retries survive Durable Object eviction by combining scheduler.wait() with Durable Object alarms; every state transition persists to strongly-consistent SQLite, so an alarm rehydrates the cache and resumes the work later."
+      "Canva's media service stores metadata for user-uploaded and library media (now 25+ billion items, 50M added daily). It is read-heavy, most media is rarely modified after creation, and most reads are of recently-created media.",
+      "MySQL on RDS hit hard walls as media neared 1 billion rows: online schema migrations took up to six weeks even with gh-ost, MySQL 5.6 capped the replication rate, they approached the 16TB EBS volume limit, each volume-size increase raised I/O latency, and ext3 capped table files at 2TB.",
+      "To buy time they moved the most-modified metadata into a JSON column, denormalized tables to cut lock contention, removed foreign keys, shortened repeated values, and added a simple ID-based sharding scheme (optimized for lookup-by-ID, at the cost of scatter-gather for rarer queries).",
+      "They chose DynamoDB (managed, prior experience, prototyped) and migrated live: rather than parse the MySQL binlog, they enqueued SQS messages noting a media was created/updated/read (without the payload); workers read current state from MySQL and wrote to DynamoDB, so messages could be reordered, retried, paused, or slowed.",
+      "Writes went on a high-priority queue and reads on a low-priority one; a backpressure-controlled scan migrated the rest, newest-first. A dual-read comparison validated DynamoDB against MySQL before serving reads from it, with MySQL fallback for not-yet-replicated media.",
+      "The cutover (the riskiest part, switching writes) used transactional/conditional writes, a rehearsed runbook, and a flag to switch reads back to MySQL within seconds. Result: seamless, no downtime, lower latency and cost — though they traded away ad-hoc SQL and now need parallel-scan migration code and manually-built composite GSIs."
     ]
   },
   {
-    "id": "cncf-ai-converging-kubernetes",
-    "title": "The Great Migration: Why Every AI Platform Is Converging on Kubernetes",
-    "source": "CNCF Blog · Vara Bonthu (AWS)",
-    "url": "https://www.cncf.io/blog/2026/03/05/the-great-migration-why-every-ai-platform-is-converging-on-kubernetes/",
+    "id": "adapty-kubernetes-migration",
+    "title": "How to migrate to Kubernetes and pay twice less? The case of Adapty",
+    "source": "Palark Blog · Anatoly Schedlovsky",
+    "url": "https://blog.palark.com/adapty-kubernetes-migration-success-story/",
     "tag": "kubernetes",
     "minutes": 10,
-    "summary": "When Kubernetes launched, the pitch was simple: run containers easily. By 2026, 82% of container users run it in production and two-thirds of orgs serving generative AI use it for inference. This piece argues the industry is converging on Kubernetes as the single substrate for data, training, inference and agents.",
-    "relevance": "A fast map of where production Kubernetes is heading and the vocabulary that now matters — gang scheduling, Karpenter, DRA, multi-cluster. Even at a fintech the operational patterns (quota fairness, scale-to-zero, blast-radius via many clusters) are the same ones you'll reason about as you level up.",
-    "readGuide": "~10 min, a landscape/trends piece (named projects, not one migration). Read the 'Three eras' framing and the Training and Serving sections for the concepts; skim the agentic and 'what's next' sections unless that's your area. Treat the project names as a reading list.",
+    "summary": "Adapty's AWS bill was dominated by outbound traffic — over 60% of the total — as it scaled to 120M app users. This is the story of leaving AWS managed services for self-hosted Kubernetes on GCP and cutting cloud costs in half.",
+    "relevance": "A concrete, numbers-driven look at why and how teams move to self-hosted Kubernetes — useful as you learn K8s and weigh cost and autoscaling. The HPA-plus-CI/CD gotcha and the traffic-architecture savings are the kind of detail you only learn from real migrations.",
+    "readGuide": "~10 min. It's a business case, not a tutorial. Read 'Reasons for abandoning the original architecture', 'Migration and challenges', and the autoscaling / Pod-stability advantages. Note the Palark/Deckhouse vendor framing and read past the promotion for the engineering.",
     "brief": [
-      "Per the January 2026 CNCF survey, 82% of container users run Kubernetes in production and 66% of orgs hosting generative AI models use it for some or all inference — the conversation has shifted from stateless web apps to data processing, training, inference and agents.",
-      "The author frames three eras on one platform: microservices (2015–2020), data + GenAI (2020–2024), and the agentic era (2025+) where workloads become long-running reasoning loops rather than request/response.",
-      "Distributed training made gang scheduling table stakes: jobs start only when all requested resources are free (Volcano, Apache YuniKorn), with Kueue emerging as the standard for quota, fair-share and multi-tenant GPU management. Request 120 GPUs with only 100 free and those 100 sit idle, burning money.",
-      "Inference is online, latency-sensitive and cost-critical: vLLM and SGLang (PagedAttention, continuous batching) plus KServe (autoscaling, versioning, traffic splitting) and Knative scale-to-zero for GPU workloads.",
-      "GPU economics dominate: MIG, time-slicing, MPS and Kubernetes Dynamic Resource Allocation (DRA) share GPUs, while Karpenter provisions exact node types and aggressively deprovisions idle capacity.",
-      "At ultra-scale the control plane itself bends: standard etcd becomes a bottleneck at 100k+ nodes (etcd v3.6 cut memory 50%), pushing teams toward multi-cluster scheduling (e.g. Armada) treating hundreds of clusters as one resource pool, plus a new CNCF 'AI conformance' effort for portability."
+      "Adapty (subscription-revenue tooling for app developers, 120M+ end users) found AWS costs ballooning: outbound data transfer to customers' mobile apps was over 60% of the bill, alongside high provisioned-IOPS charges and vendor lock-in on ECS, RDS, ElastiCache, CloudWatch and more.",
+      "They moved to self-hosted Kubernetes (Deckhouse, a CNCF-certified distro) on plain GCP VMs, replacing managed services with open-source equivalents. The article stresses the savings came from K8s and self-hosting, NOT from a cheaper cloud provider.",
+      "The database was the hardest part (over two weeks): RDS can't be physically replicated outside AWS, so a 1.3TB Postgres DB had to be rebuilt from scratch — while absorbing up to 1TB of updates per hour and upgrading Postgres 12 to 13. Bulk migration took ~3 weeks, plus ~3 weeks of stabilization.",
+      "Concrete cost reductions: traffic −60% (by eliminating redundant inter-region mesh traffic between API, PgBouncer and DB), database −50%, logging −40% (ELK replacing CloudWatch), caching −30% — roughly 50% overall.",
+      "Autoscaling was a major win: spikes from ~2,000 to 30,000 RPS are handled by dynamic node and Pod autoscaling instead of dozens of idle standby VMs. A subtle gotcha: HPA had scaled Pods up, but a werf deploy reset replicas to the manifest value — fixed with a replicas-on-creation annotation and zeroing the static replica count.",
+      "Other gains: crashed Pods restart automatically (vs an ECS workaround script polling every 30s), CI/CD uses standard tooling, and IOPS costs fell by switching to large SSDs (~30 IOPS/GB). The piece is a Palark customer case study — genuine engineering detail wrapped in some vendor promotion."
     ]
   }
 ];
@@ -573,47 +573,47 @@ var TODAYS_ARTICLES = [
 // GROWTH_START
 var GROWTH_PICKS = [
   {
-    "id": "method-stoic-software-development",
-    "title": "A Stoic Look at Software Development",
-    "source": "Method · Insights",
-    "url": "https://www.method.com/insights/stoic-look-at-software-development/",
+    "id": "dichotomy-of-control-in-software",
+    "title": "Dichotomy of control in software",
+    "source": "zsombor.io · Zsombor Erdődy-Nagy",
+    "url": "http://zsombor.io/blog/2020/01/21/dichotomy-of-control.html",
     "tag": "philosophy",
-    "minutes": 9,
-    "summary": "Stoicism has quietly permeated software culture — and this essay pulls quotes from Marcus Aurelius, Epictetus and Seneca and maps each to a concrete engineering practice, from blameless deployments to measuring before you change.",
-    "relevance": "A calm reframing for the parts of the job you can't control — a region outage, someone's opinion of your tech choice — and the parts you can: your tests, your kindness in review, your next small step. The 'measure before you change' discipline is directly usable on Ziina's performance work.",
-    "readGuide": "~9 min, an easy read built around quotes. The opening four-point gloss on Marcus Aurelius 8.7 is the whole philosophy in miniature; then skim to the 'Psychological Safety' and 'Work/Life Balance' sections, which carry the most actionable engineering advice.",
+    "minutes": 7,
+    "summary": "Epictetus's dichotomy of control — separate what you command from what you don't — meets the daily chaos of software: S3 outages, blown estimates, promo committees, biased interviewers. An engineer maps the Stoic frame onto the craft.",
+    "relevance": "A direct translation of Stoicism into your working life. When a deploy breaks or a review stings, the move is the same: name the part you control (your design, your prep, your response), pour energy there, and let go of the outcome you don't own.",
+    "readGuide": "~7 min, easy. The can't/can lists in the middle are the core — read those slowly and substitute your own examples. 'Embrace imperfection' and 'Balance' add the crucial caveat that control isn't a licence to overdo things.",
     "brief": [
-      "Stoicism reduces to three tenets — you will die (so time matters), you control only your own mind (not external events), and obstacles are the path — drawn from Marcus Aurelius, Epictetus and Seneca.",
-      "Meditations 8.7 maps to four engineering habits: start where you are and measure before changing; don't cut corners (write tests, mentor); focus only on what's in your power (not a stranger's take on your stack, or a us-east-1 outage); and adapt as things come — the essence of Agile.",
-      "'We don't abandon our pursuits because we despair of perfecting them' (Epictetus): software is never done, there's always tech debt — make small incremental changes and don't let perfect be the enemy of good.",
-      "Psychological safety as Stoic practice: teams that deploy in fear of blame are unhealthy. Expect failure, assume everyone did their best with the tools they had, find the root cause without blaming, and make deployment easy so it grows safer over time.",
-      "Measure before you change: 'the app is slow, let's cache' and 'velocity is slow, let's add developers' are self-deception unless you quantify first, make the change, then measure again to know it actually improved.",
-      "Ask for help without shame — impostor syndrome is 'a paper monster' — and keep work in proportion (Seneca on the lawyer dying at court): your job is not the most important thing in your life."
+      "The Stoic dichotomy of control (Epictetus, Discourses): the chief task in life is to separate what's under our control from what isn't, and to focus energy on the former while worrying less about the latter.",
+      "The author maps this onto software with honest examples: you can't stop S3 (and half the internet) going down, can't foresee every bit of tech debt that wrecks an estimate, can't control a promo committee's calibration, can't pick a fair, well-rested interviewer.",
+      "For each there's a 'can': follow distributed-systems best practices and build in redundancy; estimate well and manage stakeholder expectations when surprises hit; cultivate an open relationship with your manager and write a strong promo packet; prepare thoroughly for the interview funnel.",
+      "A key caveat: something being in your control doesn't make it EASY, and telling the two categories apart is itself hard up close — practical wisdom, built by reflecting on experience, is what sharpens the distinction.",
+      "'Embrace imperfection': tests, dashboards, and cautious rollouts all help but never eliminate risk, and each can become a double-edged burden (maintenance load, information overload, glacial dev pace). Perfectionists tend not to thrive.",
+      "'Balance': having control over something doesn't mean overdoing it. The sweet spot is a moving target, so the answer is constant iteration — accepting you'll sometimes do too much or too little, and course-correcting."
     ]
   },
   {
-    "id": "github-octoverse-2025-workflow",
-    "title": "What 986 Million Code Pushes Say About the Developer Workflow in 2025",
-    "source": "The GitHub Blog · Cassidy Williams",
-    "url": "https://github.blog/news-insights/octoverse/what-986-million-code-pushes-say-about-the-developer-workflow-in-2025/",
+    "id": "stacked-prs-on-github",
+    "title": "My workflow for stacked PRs on GitHub",
+    "source": "Dave Pacheco's Blog · Dave Pacheco",
+    "url": "https://www.davepacheco.net/blog/2025/stacked-prs-on-github/",
     "tag": "workflow",
-    "minutes": 5,
-    "summary": "Nearly a billion commits — 986 million — were pushed to GitHub last year, and the data shows it's not just that we code faster but that how we ship has structurally changed. The quarterly-release era is over; constant small iteration is the new default.",
-    "relevance": "A mirror for your own workflow at Ziina: if reviews stall on giant PRs or releases wait on edge cases, you're working against the grain. Steal the concrete moves — smaller single-purpose PRs, feature flags as a core shipping tool, CI/CD on every push — to ship payment changes more safely and faster.",
-    "readGuide": "~5 min, breezy and opinion-led. Read 'Iteration is the default state' and 'Shipping looks different now' for the substance (those four bullets are the takeaways); the communication and closing sections are the author's forecast and skimmable.",
+    "minutes": 12,
+    "summary": "Stacked PRs keep your changes small without blocking on each one landing — but GitHub makes them painful if you also squash-merge for a linear history. Pacheco shares the exact git dance that avoids re-resolving the same conflicts.",
+    "relevance": "If you keep PRs small (and on payment code you should), this is a concrete workflow to stay unblocked while one PR is in review. The 'merge -Xours' trick and the diff-the-diffs check are immediately usable on your next stack.",
+    "readGuide": "~12 min. Read the tl;dr and 'Shortest possible explanation' for the principles; the 'key step' (the three-merge fix-up after a squash) is the payoff. The rebase/force-push comparison explains WHY he avoids them — skim if you're convinced.",
     "brief": [
-      "The scale: developers created 230+ repositories per minute and pushed 986 million commits last year — and it reads as a durable shift toward constant iteration, not a temporary spike.",
-      "Big quarterly releases are fading; lightweight, frequent commits are the norm. Smaller changes are easier to review, debug and roll back — so 'done' is treated as temporary rather than a giant finished chunk.",
-      "Feature flags have moved from A/B-testing niche to a core shipping mechanism: push incomplete work to prod behind a toggle, watch how it behaves, and flip it off instantly if it misbehaves — without holding up the release for edge cases.",
-      "CI/CD now runs everything automatically on every push (tests, builds, artifacts, security scans, deploy); manual deploys are increasingly rare. Teams burned 11.5 billion GitHub Actions minutes on tests last year, a 35% increase.",
-      "Pull requests are getting shorter and single-purpose — 'not novels anymore' — which lowers review overhead and, counterintuitively, increases overall speed.",
-      "The author predicts communication follows the code: shorter or async standups, status living in issues rather than meetings, and specs moving closer to code via Markdown-to-code workflows — though 'AI fatigue' will cull tools that add friction."
+      "Stacked PRs keep individual changes small (easier to review, reason about, backport) while letting you keep working instead of blocking on each one landing. The pain on GitHub comes from combining them with squash-merges for a linear main history.",
+      "Core principles: each PR is a branch whose base is the previous PR's branch; all work is ordinary commits (no rebases, no force pushes); upstream changes flow DOWN into the immediate downstream branch via git merge; downstream changes never flow up; PRs land on main via squash.",
+      "The hard problem: when PR #1 squash-merges to main as a new commit M4, Git doesn't know M4 has the same content as branch1's commits. Naively merging main into branch2 re-conflicts commits A1–A3 against M4 — pointless conflicts that are an artifact of the process, not real.",
+      "The fix is a precise three-merge sequence on branch2: (1) git merge origin/branch1 to absorb any last parent changes; (2) git merge M3 (the commit on main BEFORE the squash) to absorb other main changes; (3) git merge -Xours M4 — the 'magic step' that pulls in the squash commit but takes your branch's version everywhere, since you've already resolved everything.",
+      "Verify by diffing the diffs: run git diff --merge-base origin/main on the branch before and after, then vimdiff the two — you should see only your manual conflict resolutions and nearby main changes.",
+      "Why avoid rebase/force-push instead? A force push to a parent branch immediately breaks every PR stacked on it, forces re-resolving conflicts you'd already handled, and breaks GitHub's incremental review (a reviewer can't see the delta from a commit that no longer exists)."
     ]
   }
 ];
 // GROWTH_END
 
-var TOTAL_READ_MINUTES = 50; // refreshed by scheduler
+var TOTAL_READ_MINUTES = 44; // refreshed by scheduler
 
 // ============================================================
 // STOIC QUOTES — rotates by day of year, no refresh needed
