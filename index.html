@@ -468,98 +468,98 @@
 // ARTICLES_START
 var TODAYS_ARTICLES = [
   {
-    "id": "stripe-idempotency-apis",
-    "title": "Designing robust and predictable APIs with idempotency",
-    "source": "Stripe Engineering · Brandur Leach",
-    "url": "https://stripe.com/blog/idempotency",
+    "id": "formance-reconciliation-patterns",
+    "title": "Account Reconciliation Patterns for High-Volume Fintech",
+    "source": "Formance · Engineering",
+    "url": "https://www.formance.com/blog/financial%20operations/account-reconciliation-patterns-for-high-volume-fintech",
     "tag": "fintech",
-    "minutes": 7,
-    "summary": "Networks fail in ambiguous ways — a charge request dies mid-flight and the client has no idea whether the customer was billed. How do you design an API a client can safely retry without ever double-charging?",
-    "relevance": "This is the canonical pattern behind every Ziina money movement: idempotency keys so a retried top-up or transfer executes exactly once. As you read, audit your mutating endpoints — which POSTs would double-charge a user if the network dropped the response?",
-    "readGuide": "~7 min. Read ‘Guaranteeing exactly once semantics’ (idempotency keys) and ‘Being a good distributed citizen’ (backoff + jitter) closely — that’s the 80/20. Skim the PUT/DELETE section if you already know your HTTP verbs.",
+    "minutes": 12,
+    "summary": "When your ledger, your PSPs, and your banks all report different balances, which one is right? A field guide to building reconciliation as infrastructure — seven matching patterns, the failure modes that create drift, and why it’s a regulatory control, not cleanup.",
+    "relevance": "Ziina’s wallet is exactly the omnibus case here: the sum of every user balance must equal what your custodian bank actually holds. Read the wallet/safeguarding section and the settlement-timing trap closely, then sanity-check how your own jobs treat in-flight transfers.",
+    "readGuide": "~12 min. The 80/20 is ‘Why Reconciliation Breaks’ (settlement-timing asymmetry, idempotency, dropped webhooks) and ‘The Seven Reconciliation Patterns’ table. Skim the Formance product pitches and the Numscript example unless you want the multi-party fee model.",
     "brief": [
-      "Calls between any two nodes fail in three ways: the connection never opens, the call dies midway leaving work in limbo, or it succeeds but the response is lost — the last two leave the client unsure whether retrying is safe.",
-      "Idempotency means an endpoint can be called any number of times but side effects happen only once; this lets a client safely retry through any failure until it verifiably succeeds.",
-      "HTTP PUT and DELETE are inherently idempotent (create-or-replace), but operations that must happen exactly once — like charging a customer — need idempotency keys: a client-generated unique ID sent with the request.",
-      "The server correlates the key with request state: a first-time key is processed normally; a retried key after a lost response simply returns the cached result of the original operation, so the customer is charged once.",
-      "Retries should use exponential backoff (wait proportional to 2^n) so clients don’t hammer a server that’s already in an incident and worsen the degradation.",
-      "Add random jitter to backoff to avoid the thundering herd — many clients failing at once and retrying in lockstep; Stripe’s Ruby library ships exactly this combo of idempotency keys, backoff, and jitter."
+      "Reconciliation is the control surface that catches drift between your internal ledger and what banks and PSPs actually hold; the post opens with a UK e-money firm (PayrNet) losing its licence partly over safeguarding and reconciliation failures.",
+      "At scale three balances disagree — your ledger, the PSP settlement report, and the bank statement — and each new rail (Stripe, Adyen, Wise) adds a bespoke normalization adapter where a mismapped field quietly hides until balances stop matching.",
+      "The most common technical failure is settlement-timing asymmetry: a card captured tonight in Stripe lands in the bank file at T+2, so a same-clock job flags in-flight items as missing — false positives that climb with volume.",
+      "Other drift sources: a retried payout reusing an idempotency key books a transfer twice; a dropped success webhook leaves your ledger ‘pending’ while the PSP shows ‘paid’; cached balances drift when a write-behind update fails silently.",
+      "Seven patterns run cheapest-first to shrink the unmatched pool: one-to-one, many-to-one (batch net settlement), one-to-many, many-to-many (subset-sum, last resort), time-window, balance-level (wallet/omnibus), and exception-based for the residual.",
+      "A bi-temporal ledger records both when an event happened and when it was recorded, so a cut-off runs as-of an effective date — a webhook dated March 31 but arriving April 2 lands in the March balance instead of distorting April."
     ]
   },
   {
-    "id": "mt-accounting-for-developers-i",
-    "title": "Accounting for Developers, Part I: The Fundamentals",
-    "source": "Modern Treasury Journal · Lucas Rocha",
-    "url": "https://www.moderntreasury.com/journal/accounting-for-developers-part-i",
+    "id": "mt-optimistic-locking",
+    "title": "Designing the Ledgers API with Optimistic Locking",
+    "source": "Modern Treasury Journal · Andy Qin",
+    "url": "https://www.moderntreasury.com/journal/designing-ledgers-with-optimistic-locking",
     "tag": "fintech",
-    "minutes": 10,
-    "summary": "If you write code that moves money, you’re already in the business of accounting — whether you call it that or not. This is the concepts-first crash course in double-entry that keeps balances from silently drifting.",
-    "relevance": "Ziina’s wallet IS a ledger of accounts, transactions, and entries. Internalize debit/credit-normal and ‘debits = credits’ here so you can model wallet balances, holds, and fees correctly — and never create or destroy money out of nothing.",
-    "readGuide": "~10 min. Read ‘Debit Vs. Credit Normal Accounts’ and ‘How to Ensure Your Ledger is Balanced’ slowly with the Modern Bagelry table — that’s where it clicks. Skim the intro; the definitions in the summary are the keepers.",
+    "minutes": 9,
+    "summary": "Two requests try to debit Lucy’s wallet at the same instant — how do you stop her balance going negative without locking reads behind every write? Modern Treasury walks through the concurrency-control design behind their Ledgers API.",
+    "relevance": "This is the exact race you’ll hit on Ziina balances: concurrent debits on one wallet. Trace why they chose optimistic over pessimistic locking so reads never block writes, and how a client passes a lock_version to make a transfer fail safely instead of overdrawing.",
+    "readGuide": "~9 min. Read ‘The Implementation’ (pessimistic vs optimistic, the StaleObjectError) and ‘The Interface’ (lock_version in the request, ETags) closely — that’s the whole lesson. The opening Venmo JSON examples are just setup.",
     "brief": [
-      "If you build a product that moves money you’re already doing accounting; most teams retrofit double-entry only after painful incidents — missing funds, broken payouts, balances that don’t reconcile against the bank.",
-      "Three primitives: an account is a segregated pool of value (a user’s wallet balance); a transaction is an atomic event with at least two entries affecting two or more accounts; a ledger is the timestamped log of those events.",
-      "Store immutable transactions and always compute balances from them — don’t mutate a balance column directly, because that makes inconsistencies non-trivial to detect and reconcile.",
-      "Every account has a type: debit-normal accounts (assets, expenses — uses of funds) increase with debits; credit-normal accounts (liabilities, equity, revenue — sources of funds) increase with credits.",
-      "A debit entry adds to a debit-normal account or subtracts from a credit-normal one; a credit entry does the reverse — they’re flags for how a value affects an account given its type, not inherently ‘add’ or ‘subtract’.",
-      "The system is correct only if the sum of all debit-normal balances equals the sum of all credit-normal balances; if they don’t match, the system created or lost money from nothing."
+      "Checking a balance before debiting doesn’t prevent overdrafts: between the read and the write, another concurrent debit can sneak in — a classic phantom-read race condition.",
+      "Pessimistic locking takes an exclusive row lock so conflicting writes fail, but it also blocks reads during a write; optimistic locking instead adds a lock_version column and only fails the loser of a true conflict.",
+      "Because ledger traffic is read-heavy and they didn’t want reads blocking writes, Modern Treasury chose optimistic locking — the loser of a simultaneous update gets a StaleObjectError to rescue and roll back.",
+      "Twist: they version not the ledger-account row but the collection of its child entries, so they added a one-to-one ‘ledger account version’ model and bump it via a Rails touch callback whenever entries post.",
+      "The API exposes this like an HTTP ETag: clients optionally pass a lock_version per entry; if it doesn’t match, the whole transaction rolls back and the request fails — so the balance can’t be overdrawn.",
+      "lock_version is optional, since not every transaction needs the guarantee; when omitted it’s updated asynchronously in a background job because it only needs to be eventually consistent."
     ]
   },
   {
-    "id": "discord-trillions-scylladb",
-    "title": "How Discord Stores Trillions of Messages",
-    "source": "Discord Engineering · Bo Ingram",
-    "url": "https://discord.com/blog/how-discord-stores-trillions-of-messages",
-    "tag": "architecture",
-    "minutes": 10,
-    "summary": "Discord’s Cassandra cluster grew from 12 nodes to 177 holding trillions of messages — and became a 24/7 firefight of hot partitions and GC pauses. Here’s how they escaped to ScyllaDB and rebuilt the data layer in Rust.",
-    "relevance": "A masterclass in diagnosing a datastore at scale and migrating it with zero downtime — directly relevant as Ziina’s transaction volume grows. The ‘data services’ coalescing layer and the dual-write-then-validate migration are patterns worth keeping in your back pocket.",
-    "readGuide": "~10 min. Read ‘Our Cassandra Troubles’ (hot partitions, GC) and ‘A Very Big Migration’ (dual-write, the Rust migrator, the 99.9999% tombstone snag) closely. Skim the Rust evangelism; the results numbers at the end are the payoff.",
-    "brief": [
-      "By 2022 the messages cluster had grown to 177 Cassandra nodes holding trillions of messages, becoming a high-toil system: unpredictable latency, frequent on-call pages, and maintenance ops too expensive to run.",
-      "Messages were partitioned by channel + time bucket; a busy channel created ‘hot partitions’ where concurrent reads (more expensive than writes in Cassandra) overwhelmed a node, and quorum reads spread that latency across the cluster.",
-      "Cassandra’s JVM garbage collector caused latency spikes and forced a manual ‘gossip dance’ to manage compaction backlogs; they moved to ScyllaDB (C++, shard-per-core, no GC) to remove a huge class of toil.",
-      "They inserted ‘data services’ written in Rust between the API monolith and the database; the key feature is request coalescing — many concurrent requests for the same row trigger only one database query, shielding hot partitions.",
-      "Consistent hash-based routing sends all requests for a given channel to the same data-service instance, maximizing coalescing and further cutting database load.",
-      "Migration: dual-write to both DBs, then a Rust migrator (replacing a 3-month Spark plan) firehosed data at up to 3.2M messages/sec, finishing in ~9 days; result: 177→72 nodes, p99 reads 40-125ms→15ms, inserts to a steady 5ms."
-    ]
-  },
-  {
-    "id": "canva-scaling-count-billions",
-    "title": "Scaling to Count Billions",
-    "source": "Canva Engineering · Sangzhuoyang Yu",
-    "url": "https://www.canva.dev/blog/engineering/scaling-to-count-billions/",
+    "id": "cloudflare-nov-2025-outage",
+    "title": "Cloudflare outage on November 18, 2025",
+    "source": "The Cloudflare Blog · Matthew Prince",
+    "url": "https://blog.cloudflare.com/18-november-2025-outage/",
     "tag": "architecture",
     "minutes": 12,
-    "summary": "Canva pays creators based on billions of content usages a month, where an overcount or lost event hits real income. The story of why their MySQL counting pipeline buckled — and how OLAP + ELT replaced thousands of lines of code.",
-    "relevance": "A concrete ‘start simple, then evolve’ architecture journey about correctness under scale — the same tension you’ll feel counting and reconciling money events at Ziina. Note how they trade row-by-row mutation for recomputable pipelines you can simply re-run to fix data.",
-    "readGuide": "~12 min. Read ‘The Evolvement’ (MySQL pain → DynamoDB → OLAP/ELT) and the incident taxonomy (over/under-count, misclassification) closely. The outer-join ‘rerun to fix’ table and the closing lessons are the 80/20.",
+    "summary": "A routine database permissions change doubled the size of a config file — and took down a large slice of the Internet for over two hours. Cloudflare’s CEO writes the full post-mortem of how one unhandled error cascaded.",
+    "relevance": "A reference-grade post-mortem for the systems you’re learning to run: how a tiny upstream change (a query missing a database filter) panics a Rust unwrap() downstream. Read it asking where your own services trust internally-generated config as blindly as user input.",
+    "readGuide": "~12 min. Read ‘How Cloudflare processes requests…’, ‘The query behaviour change’, and ‘Memory preallocation’ (the 200-feature limit and the unwrap() panic) closely. The services-impacted table and timeline are skimmable reference.",
     "brief": [
-      "Canva pays creators on billions of content usages per month; the counting service must be accurate (creators’ income is at stake), scalable to exponential growth, and operable under incidents.",
-      "The first MySQL design used a single-threaded sequential scan with a per-record database round trip — O(N) queries — so it couldn’t scale, and one bad record delayed all following records and downstream stages.",
-      "Incident recovery was manual and painful: over-counting, under-counting, and misclassification each required pausing the pipeline and hand-fixing rows, often days of work with engineers cross-verifying output.",
-      "MySQL RDS couldn’t scale storage horizontally, so they doubled instance size every 8-10 months — unsustainable; moving raw events to DynamoDB eased storage but left the processing-scalability (round-trip) problem unsolved.",
-      "The fix was OLAP + ELT: extract/load events into Snowflake, then express dedup and aggregation as DBT SQL transformations with intermediate views — aggregating billions of records in minutes, pipeline latency from >1 day to <1 hour.",
-      "Because aggregations recompute end-to-end and outer-join against prior results, most incidents are fixed by simply rerunning the pipeline (no DB surgery); they cut >50% of stored data and thousands of lines of code. Lesson: fixing code beats fixing broken data."
+      "At 11:20 UTC on 18 Nov 2025 Cloudflare began failing core traffic for ~2h10m; it was not an attack but a self-inflicted config bug — their worst outage since 2019.",
+      "A ClickHouse permissions change made an unfiltered system.columns query suddenly return duplicate rows from the underlying r0 database, more than doubling the Bot Management ‘feature file’ regenerated every five minutes.",
+      "The file flipped good/bad every five minutes as the rollout spread across cluster nodes, so the system recovered then failed repeatedly — which initially looked like a DDoS attack (made worse by an unrelated status-page outage).",
+      "The proxy’s Bot Management module preallocates memory for a max of 200 features (vs ~60 used); the oversized file blew past the limit and a Rust unwrap() on the error panicked the worker thread, returning HTTP 5xx.",
+      "Two failure modes from one file: the old proxy (FL) didn’t 5xx but scored all traffic as bots → mass false positives for customers blocking bots; the new proxy (FL2) returned 5xx outright.",
+      "Fix: stop generating and propagating the file, inject a known-good version, restart the core proxy (recovered ~14:30, fully clear 17:06); follow-ups include treating internal config like untrusted input and adding global kill switches."
     ]
   },
   {
-    "id": "learnk8s-requests-limits",
-    "title": "Setting the right requests and limits in Kubernetes",
-    "source": "LearnK8s · Santhosh Nagaraj",
-    "url": "https://learnkube.com/setting-cpu-memory-limits-requests",
-    "tag": "kubernetes",
-    "minutes": 18,
-    "summary": "Guess your pod’s CPU and memory wrong and Kubernetes either wastes nodes or OOM-kills you under load. Instead of guessing, this hands-on guide derives the right requests and limits by observing the app at runtime.",
-    "relevance": "Core production K8s skill for the services you’re learning to run: requests decide scheduling, limits decide who gets throttled or OOM-killed. The VPA + metrics-server + Goldilocks loop is a repeatable recipe for right-sizing without guesswork.",
-    "readGuide": "~18 min, hands-on. Read ‘Understanding CPU and memory units’, the CPU-shares examples, and ‘Memory and CPU limits’ (OOMKill vs throttling) closely. Skim the minikube/Locust setup unless you’re following along live.",
+    "id": "figma-unified-parameters",
+    "title": "A Tale of Two Parameter Architectures—and How We Unified Them",
+    "source": "Figma · Jenning Chen",
+    "url": "https://www.figma.com/blog/a-tale-of-two-parameter-architectures/",
+    "tag": "architecture",
+    "minutes": 10,
+    "summary": "Figma shipped component properties and variables months apart, each on its own architecture — and the overlap started producing inconsistent renders and slowing every new feature. Here’s how they merged two systems into one without breaking users.",
+    "relevance": "A clean case study in paying down architectural divergence: two subsystems that do ‘the same thing’ drift apart and tax every future change. Useful as you study software design — note how they unified the data model first (shared typespace + single binding) before touching the runtime.",
+    "readGuide": "~10 min. Read ‘Unifying the data model’ (shared typespace, one binding per property) and ‘Unifying the parameter runtime’ (the 4-step tracking→invalidation→resolution→update flow). Skim the product-feature backstory at the top.",
     "brief": [
-      "Requests are the minimum a container is guaranteed and what the scheduler uses to place pods (think Tetris — a pod with no requests has no size); limits are the hard ceiling that protects the node from a greedy container.",
-      "CPU is measured in millicores (1 CPU = 1000m); memory in bytes — prefer binary units like 256Mi. A CPU request also sets a relative ‘share’: under contention, containers split CPU proportionally to their shares.",
-      "Hitting a memory limit gets the process OOM-killed; hitting a CPU limit only throttles it — CPU is a function of time, so ‘1 CPU’ means 1 CPU-second per second, and multithreaded apps burn quota faster and get throttled sooner.",
-      "Limits don’t change what the container sees: it still reads the node’s total CPU/memory, which can break runtimes like the JVM that size their heap from visible memory — a classic production footgun.",
-      "Don’t guess values — observe the app under load (here a Flask cache hit with Locust) and let the metrics-server feed the Vertical Pod Autoscaler, which applies a statistical model to recommend lower-bound, target, and upper-bound resources.",
-      "Use the VPA’s lower bound as requests and upper bound as limits; the Goldilocks dashboard visualizes these recommendations per deployment, and the VPA can even apply them automatically."
+      "Component properties (2022, scoped per-component, mirroring code props) and variables (2023, global/library-level, themable) are both ‘set-once, apply-across’ parameter systems — but were built on separate architectures.",
+      "By 2024 the split caused user-facing bugs (a variable and a component property could bind the same layer property, giving inconsistent rendering) and made it nearly impossible to extend parametrization to new products.",
+      "Data-model fix part 1: collapse duplicate type definitions (VariableType.BOOLEAN vs ComponentPropType.BOOLEAN) into one shared typespace, which also unlocked cross-system bindings like binding a component property to a number variable.",
+      "Data-model fix part 2: one canonical way to store bindings, with each layer property bound to at most one parameter — so a future third system reuses the binding infra instead of adding a third storage scheme.",
+      "Runtime unification: every system now runs the same flow — usage tracking → invalidation → resolution → update — with invalidation tightened to the property level and a single resolution path handling transitive cases like variable aliasing.",
+      "Payoff: eliminated inconsistencies, a stable base for an upcoming third system (the Figma Sites CMS), and performance wins (faster add/delete/duplicate of variable modes) from more granular invalidation."
+    ]
+  },
+  {
+    "id": "cybozu-cilium-bare-metal",
+    "title": "Delivering High Performance Workflows with Cybozu and Cilium",
+    "source": "CNCF Case Study · Cybozu",
+    "url": "https://www.cncf.io/case-studies/cybozu/",
+    "tag": "kubernetes",
+    "minutes": 8,
+    "summary": "How does a Japanese SaaS company move 1,000+ bare-metal servers off VMs onto Kubernetes without melting under its own load-balancing problems? Cybozu’s four-year migration leans on Cilium’s eBPF networking to make it stick.",
+    "relevance": "A grounded production migration story for your K8s learning: the hard part wasn’t pods, it was Layer-4 load balancing and network policy at scale. See why iptables-based kube-proxy didn’t cut it and what eBPF (DSR, Maglev hashing) bought them.",
+    "readGuide": "~8 min. Short case study — read ‘Scalable, Efficient Load Balancing with Cilium’ and the Key Impacts list closely. The numbers (1,000+ servers, 4+ years, 5 engineers) and the Coil+Cilium chaining detail are the keepers.",
+    "brief": [
+      "Cybozu (maker of the Kintone platform) modernized from on-prem VMs to Kubernetes on 1,000+ bare-metal servers, building its own CNI plugin ‘Coil’ — but Coil lacked load balancing and network-policy support.",
+      "Their initial Calico+Coil setup couldn’t provide enough availability for Layer-4 connectivity (TCP/UDP) or survive node failures, so they evaluated OSS, read papers, and even considered writing their own load balancer.",
+      "They adopted Cilium as the only ‘all-in-one’ fit; its eBPF-based kube-proxy replacement provides Direct Server Return for throughput, Maglev hashing for stable load distribution, and drops iptables rules for better scalability.",
+      "Cilium runs in CNI-chaining mode alongside Coil, letting Cybozu keep parts of their stack while delegating service handling, network policy, and Hubble observability to Cilium.",
+      "Results over 4+ years in production: a seamless VM→K8s migration, incrementally applicable network policies (no major rewrites), Maglev keeping services up through node failures, and Hubble tracing dropped connections during migration.",
+      "Next steps: replace the old Cilium BGP integration with the new BGP Control Plane, and eventually make Cilium the primary CNI instead of the internally-built Coil."
     ]
   }
 ];
@@ -573,47 +573,47 @@ var TODAYS_ARTICLES = [
 // GROWTH_START
 var GROWTH_PICKS = [
   {
-    "id": "dailystoic-4-lessons-self-discipline",
-    "title": "The Philosophy of Stoicism: 4 Lessons From Antiquity on Self-Discipline",
-    "source": "Daily Stoic · Philip Ghezelbash",
-    "url": "https://dailystoic.com/self-discipline/",
+    "id": "method-stoic-software",
+    "title": "A Stoic Look at Software Development",
+    "source": "Method · Engineering",
+    "url": "https://www.method.com/insights/stoic-look-at-software-development/",
     "tag": "philosophy",
-    "minutes": 5,
-    "summary": "The Stoics treated self-discipline as the keystone virtue — the thing that makes every other good habit fall into place. Four concrete practices, drawn from antiquity, for actually building it.",
-    "relevance": "Practical fuel for the deep-work and consistency your upskilling demands. ‘Review your day’ and ‘distractions are your own doing’ map straight onto an engineer’s evening retro and the discipline of ignoring what’s outside your control.",
-    "readGuide": "~5 min. Short and list-structured — read all four lessons; the keepers are #2 (evening retrospection) and #3 (dichotomy of control applied to distraction). The author bio at the end is skippable.",
+    "minutes": 7,
+    "summary": "An engineer who found Stoicism through DHH maps Marcus Aurelius, Epictetus, and Seneca straight onto the daily realities of shipping software — psychological safety, agile, work/life balance, and asking for help.",
+    "relevance": "A direct translation of Stoic control and ‘the obstacle is the way’ into engineering habits you’re building: focus only on what you control (not us-east-1 going down), measure before you change, and treat blameless incident reviews as the practice.",
+    "readGuide": "~7 min. Read the ‘Overall’ Marcus Aurelius breakdown and the ‘Psychological Safety’ and ‘Work/Life Balance’ sections. The quotes are the substance; the footnote jokes are skippable.",
     "brief": [
-      "In Stoicism, temperance subdivides into self-control, discipline, and modesty — and the author argues discipline is the fundamental habit that keeps everything else (health, progress, goals) in place.",
-      "Lesson 1 — find wise people to emulate: pick someone morally sound and one step ahead, study what they do and especially what they don’t do, and humbly admit how much you don’t know.",
-      "Lesson 2 — review your day: practice ‘evening retrospection’ (journalling) asking what you did well, where your discipline was tested, and how to improve — building self-awareness over time.",
-      "Lesson 3 — your distractions are your own doing: per Marcus Aurelius, distress comes from your estimate of a thing, not the thing; apply Epictetus’s dichotomy of control and let go of the external.",
-      "Lesson 4 — every day is a new life (Seneca): a bad day needn’t become a bad week; past actions are out of your control, so release the anchor and refocus on what’s in front of you.",
-      "The throughline: discipline is doing the work regardless of mood or conditions, and self-scrutiny plus accepting the uncontrollable is what makes consistency sustainable."
+      "Stoicism’s three tenets — you will die, you control only your mind, and the obstacle is the way — map cleanly onto engineering, so well the author jokes Marcus Aurelius could’ve moonlighted as a COBOL dev.",
+      "On a Marcus Aurelius passage: start where you are and measure before you change (‘lack of a signal is a signal’); don’t cut corners (write tests, mentor); ignore what you can’t control; adapt as things come (that’s Agile).",
+      "Agile through Epictetus: ‘we don’t abandon our pursuits because we despair of ever perfecting them’ — software is never done, so make small incremental improvements and don’t let perfect be the enemy of good.",
+      "Psychological safety: teams that fear deployment because ‘someone’s head will roll’ are unhealthy; presume everyone did their best with what they knew, find root cause without blame, and make deploys easy so they get safer.",
+      "Work/life balance via Seneca: your job is not the most important thing in your life; and via Marcus, asking for help is no shame — even a veteran looks up syntax constantly, because great software is a team effort.",
+      "The throughline is the dichotomy of control plus ‘the impediment to action advances action’ — stay adaptable, raise blockers, and route around Big Dumb Corporate Processes instead of resenting them."
     ]
   },
   {
-    "id": "mwl-git-worktrees-parallel",
-    "title": "Parallelise yourself with Git worktrees",
-    "source": "madewithlove · Wouter Sioen",
-    "url": "https://madewithlove.com/blog/parallelise-yourself-with-git-worktrees/",
+    "id": "marcnuri-ai-async-productivity",
+    "title": "Boosting My Developer Productivity with AI in 2025",
+    "source": "Marc Nuri (Red Hat Sr. Principal Engineer)",
+    "url": "https://blog.marcnuri.com/boosting-developer-productivity-ai-2025",
     "tag": "workflow",
-    "minutes": 4,
-    "summary": "A 30-minute data pipeline locks up your working directory and you can’t context-switch without losing progress. Git worktrees let you spin up a second isolated checkout in seconds and just keep working.",
-    "relevance": "A small workflow upgrade with outsized payoff while you wait on long migrations, test runs, or CI at Ziina. Learn the raw ‘git worktree add’ mechanism so you can run a fix on its own branch without stashing or re-cloning the repo.",
-    "readGuide": "~4 min. Tiny read — skim the Claude ‘-w’ specifics and focus on the ‘Note for Other AI Tools’ block and ‘When This Shines’; the raw git commands there are the transferable part.",
+    "minutes": 7,
+    "summary": "A senior open-source maintainer roughly doubled his daily output not by typing faster but by flipping from synchronous coding to orchestrating parallel async AI agents. He measures it honestly — and names the burnout and junior-developer costs.",
+    "relevance": "A concrete workflow blueprint as you sharpen your dev tooling: parallel CLI agents on separate git worktrees, issue-to-PR async loops you can review from your phone, and the key insight that your project’s test coverage is what makes AI actually effective.",
+    "readGuide": "~7 min. Read ‘The AI Tooling Landscape’ (autocomplete→CLI agents→issue-to-PR), ‘The Project Factor’, and ‘The Uncomfortable Truths’. Skim the intro contribution-graph anecdote; the takeaways section restates the core.",
     "brief": [
-      "Problem: a long-running task (a 30-min data pipeline) occupies your working directory, and you can’t switch tasks without abandoning progress or just waiting it out.",
-      "A git worktree is a second working directory backed by the same repo, checked out to its own branch — full isolation, no conflicts, no context pollution, while commits and branches stay shared with the main repo.",
-      "Claude Code’s ‘claude -w <name>’ flag automates it: creates a worktree under .claude/worktrees/, checks out a new branch, and starts a session there, leaving your main directory untouched.",
-      "The underlying mechanism is pure Git and works with any tool: ‘git worktree add ../my-repo-parallel -b feature/parallel-work’, then cd in and work — each worktree just needs its own dependencies installed.",
-      "Clean up when done with ‘git worktree list’ and ‘git worktree remove <path>’; the branch’s changes are already there, ready for a PR.",
-      "Best fits: long-running tasks (pipelines, migrations, full test runs), reviewing a PR in a worktree while your main work continues, and running parallel experiments in separate worktrees."
+      "After restructuring his workflow around AI tooling, the author’s GitHub activity jumped from ~10-15 to 25+ contributions/day; he tracked commit/PR velocity, time-to-merge, and how often he could review away from the keyboard.",
+      "He ranks tools by how they fit the workflow: autocomplete and AI-IDEs help but stay synchronous (you’re still the bottleneck); chat UIs are good for exploring; the real shift is CLI agents and issue-to-PR flows.",
+      "The breakthrough is async parallelism: run multiple Claude Code agents on separate git worktrees, or assign GitHub issues to a coding agent and review the resulting PRs — even from a phone — turning meetings and gaps into productive time.",
+      "The single biggest factor in AI effectiveness is project state: comprehensive tests, consistent patterns, black-box tests, and good docs make a codebase ‘AI-ready’; chaotic context yields chaotic output.",
+      "Honest costs: burnout risk from never disconnecting, and a ‘junior developer problem’ — AI interns do the grunt work juniors used to learn from, so orgs need deliberate apprenticeship models.",
+      "Where it shines is grunt work: he migrated YAKD’s frontend from create-react-app to Vite across 193 files (Jest→Vitest, ESLint) in minutes, and cleared long-deferred SonarCloud issues — tasks that would otherwise never get done."
     ]
   }
 ];
 // GROWTH_END
 
-var TOTAL_READ_MINUTES = 57; // refreshed by scheduler
+var TOTAL_READ_MINUTES = 51; // refreshed by scheduler
 
 // ============================================================
 // STOIC QUOTES — rotates by day of year, no refresh needed
