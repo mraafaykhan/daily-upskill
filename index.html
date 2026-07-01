@@ -468,98 +468,98 @@
 // ARTICLES_START
 var TODAYS_ARTICLES = [
   {
-    "id": "formance-reconciliation-patterns",
-    "title": "Account Reconciliation Patterns for High-Volume Fintech",
-    "source": "Formance · Engineering",
-    "url": "https://www.formance.com/blog/financial%20operations/account-reconciliation-patterns-for-high-volume-fintech",
-    "tag": "fintech",
-    "minutes": 12,
-    "summary": "When your ledger, your PSPs, and your banks all report different balances, which one is right? A field guide to building reconciliation as infrastructure — seven matching patterns, the failure modes that create drift, and why it’s a regulatory control, not cleanup.",
-    "relevance": "Ziina’s wallet is exactly the omnibus case here: the sum of every user balance must equal what your custodian bank actually holds. Read the wallet/safeguarding section and the settlement-timing trap closely, then sanity-check how your own jobs treat in-flight transfers.",
-    "readGuide": "~12 min. The 80/20 is ‘Why Reconciliation Breaks’ (settlement-timing asymmetry, idempotency, dropped webhooks) and ‘The Seven Reconciliation Patterns’ table. Skim the Formance product pitches and the Numscript example unless you want the multi-party fee model.",
-    "brief": [
-      "Reconciliation is the control surface that catches drift between your internal ledger and what banks and PSPs actually hold; the post opens with a UK e-money firm (PayrNet) losing its licence partly over safeguarding and reconciliation failures.",
-      "At scale three balances disagree — your ledger, the PSP settlement report, and the bank statement — and each new rail (Stripe, Adyen, Wise) adds a bespoke normalization adapter where a mismapped field quietly hides until balances stop matching.",
-      "The most common technical failure is settlement-timing asymmetry: a card captured tonight in Stripe lands in the bank file at T+2, so a same-clock job flags in-flight items as missing — false positives that climb with volume.",
-      "Other drift sources: a retried payout reusing an idempotency key books a transfer twice; a dropped success webhook leaves your ledger ‘pending’ while the PSP shows ‘paid’; cached balances drift when a write-behind update fails silently.",
-      "Seven patterns run cheapest-first to shrink the unmatched pool: one-to-one, many-to-one (batch net settlement), one-to-many, many-to-many (subset-sum, last resort), time-window, balance-level (wallet/omnibus), and exception-based for the residual.",
-      "A bi-temporal ledger records both when an event happened and when it was recorded, so a cut-off runs as-of an effective date — a webhook dated March 31 but arriving April 2 lands in the March balance instead of distorting April."
-    ]
-  },
-  {
-    "id": "mt-optimistic-locking",
-    "title": "Designing the Ledgers API with Optimistic Locking",
-    "source": "Modern Treasury Journal · Andy Qin",
-    "url": "https://www.moderntreasury.com/journal/designing-ledgers-with-optimistic-locking",
+    "id": "mt-scale-ledger-1",
+    "title": "How to Scale a Ledger, Part I: Why Use a Ledger Database",
+    "source": "Modern Treasury · Matt McNierney",
+    "url": "https://www.moderntreasury.com/journal/how-to-scale-a-ledger-part-i",
     "tag": "fintech",
     "minutes": 9,
-    "summary": "Two requests try to debit Lucy’s wallet at the same instant — how do you stop her balance going negative without locking reads behind every write? Modern Treasury walks through the concurrency-control design behind their Ledgers API.",
-    "relevance": "This is the exact race you’ll hit on Ziina balances: concurrent debits on one wallet. Trace why they chose optimistic over pessimistic locking so reads never block writes, and how a client passes a lock_version to make a transfer fail safely instead of overdrawing.",
-    "readGuide": "~9 min. Read ‘The Implementation’ (pessimistic vs optimistic, the StaleObjectError) and ‘The Interface’ (lock_version in the request, ETags) closely — that’s the whole lesson. The opening Venmo JSON examples are just setup.",
+    "summary": "Most engineers start by embedding money logic in domain models — price on the ride, balance on the loan. This opening chapter argues why that quietly breaks at scale, and why any company moving money needs a dedicated double-entry ledger as its single source of truth.",
+    "relevance": "Directly on point for Ziina's wallet: if a user balance is a sum across bookings or a field on a domain object, it's the attribution that goes missing — not the cash. Read it asking where your true source-of-truth for balances actually lives, and whether double-entry is enforced at the source.",
+    "readGuide": "~9 min. The 80/20 is 'Why Traditional Models Fail At Scale' (the four failure modes) and 'The Fintech Translation Problem'. Read the 'Real-World Consequences' anecdote in full; skim the closing Modern Treasury product pitch.",
     "brief": [
-      "Checking a balance before debiting doesn’t prevent overdrafts: between the read and the write, another concurrent debit can sneak in — a classic phantom-read race condition.",
-      "Pessimistic locking takes an exclusive row lock so conflicting writes fail, but it also blocks reads during a write; optimistic locking instead adds a lock_version column and only fails the loser of a true conflict.",
-      "Because ledger traffic is read-heavy and they didn’t want reads blocking writes, Modern Treasury chose optimistic locking — the loser of a simultaneous update gets a StaleObjectError to rescue and roll back.",
-      "Twist: they version not the ledger-account row but the collection of its child entries, so they added a one-to-one ‘ledger account version’ model and bump it via a Rails touch callback whenever entries post.",
-      "The API exposes this like an HTTP ETag: clients optionally pass a lock_version per entry; if it doesn’t match, the whole transaction rolls back and the request fails — so the balance can’t be overdrawn.",
-      "lock_version is optional, since not every transaction needs the guarantee; when omitted it’s updated asynchronously in a background job because it only needs to be eventually consistent."
+      "Engineers instinctively embed financial logic in domain models — price as a property of the ride, a gym's payout as a sum across bookings, remaining balance stored on the loan object — which works early but breaks as money features deepen.",
+      "Four failure modes appear at scale: reporting needs expand (every movement must be immutably recorded with source and destination), data fragments across services, performance degrades (payout crons miss deadlines, card-auth checks lag), and failure scenarios like overcharges multiply without an audit trail.",
+      "A ledger database is a simple data model — Accounts (discrete pools of value), Transactions (atomic monetary events), and Entries (the individual debits and credits) — but the business logic layered on top is where the real complexity lives.",
+      "A scalable ledger must guarantee four things: immutability (past states always retrievable), double-entry enforcement (money can't move without specifying source and destination), concurrency controls (no double-spend even when writes arrive out of order), and efficient aggregations.",
+      "The 'fintech translation problem': product engineers speak domain models (orders, rides, bookings) while finance speaks debits, credits, assets, and liabilities; events are fragmented, arrive in arcane bank formats, and come from mutable records, so reconciliation ends up manual and aggregate-only.",
+      "A real anecdote: a consumer payments company found a few million dollars 'missing' every month — not the funds, but the attribution of who they belonged to. Enforcing double-entry and immutability at the source makes money going missing architecturally impossible, like a unique index in a relational DB."
     ]
   },
   {
-    "id": "cloudflare-nov-2025-outage",
-    "title": "Cloudflare outage on November 18, 2025",
-    "source": "The Cloudflare Blog · Matthew Prince",
-    "url": "https://blog.cloudflare.com/18-november-2025-outage/",
-    "tag": "architecture",
-    "minutes": 12,
-    "summary": "A routine database permissions change doubled the size of a config file — and took down a large slice of the Internet for over two hours. Cloudflare’s CEO writes the full post-mortem of how one unhandled error cascaded.",
-    "relevance": "A reference-grade post-mortem for the systems you’re learning to run: how a tiny upstream change (a query missing a database filter) panics a Rust unwrap() downstream. Read it asking where your own services trust internally-generated config as blindly as user input.",
-    "readGuide": "~12 min. Read ‘How Cloudflare processes requests…’, ‘The query behaviour change’, and ‘Memory preallocation’ (the 200-feature limit and the unwrap() panic) closely. The services-impacted table and timeline are skimmable reference.",
+    "id": "gocardless-idempotency",
+    "title": "Safely retrying API requests",
+    "source": "GoCardless · Lawrence Jones",
+    "url": "https://gocardless.com/blog/idempotency-keys/",
+    "tag": "fintech",
+    "minutes": 5,
+    "summary": "You POST a payment and get a 500 — or no response at all. Did the charge go through? This short, concrete piece shows how idempotency keys let you retry money-moving requests without ever risking a duplicate payment.",
+    "relevance": "The exact failure mode Ziina's transfer endpoints hit on flaky networks. Read it as a spec: every create-payment POST should carry a client-generated key, and your API should return a 409 on replay rather than silently creating a second transfer.",
+    "readGuide": "~5 min. Short and example-driven. Read the 'Why are they necessary?' framing, then study the two HTTP snippets — the Idempotency-Key request and the 409 conflict response. That's the entire lesson.",
     "brief": [
-      "At 11:20 UTC on 18 Nov 2025 Cloudflare began failing core traffic for ~2h10m; it was not an attack but a self-inflicted config bug — their worst outage since 2019.",
-      "A ClickHouse permissions change made an unfiltered system.columns query suddenly return duplicate rows from the underlying r0 database, more than doubling the Bot Management ‘feature file’ regenerated every five minutes.",
-      "The file flipped good/bad every five minutes as the rollout spread across cluster nodes, so the system recovered then failed repeatedly — which initially looked like a DDoS attack (made worse by an unrelated status-page outage).",
-      "The proxy’s Bot Management module preallocates memory for a max of 200 features (vs ~60 used); the oversized file blew past the limit and a Rust unwrap() on the error panicked the worker thread, returning HTTP 5xx.",
-      "Two failure modes from one file: the old proxy (FL) didn’t 5xx but scored all traffic as bots → mass false positives for customers blocking bots; the new proxy (FL2) returned 5xx outright.",
-      "Fix: stop generating and propagating the file, inject a known-good version, restart the core proxy (recovered ~14:30, fully clear 17:06); follow-ups include treating internal config like untrusted input and adding global kill switches."
+      "The problem: a POST to /payments that returns 201 clearly succeeded and a 4xx clearly failed, but a 500 or a dropped connection leaves you unable to know whether the payment was actually created.",
+      "That ambiguity forces a bad choice: assume success and take no action (risking a lost payment), or retry and risk creating a duplicate payment.",
+      "Idempotency keys solve it — unique client-supplied tokens sent as a request header that guarantee only one resource is created no matter how many times the request is sent.",
+      "GoCardless rolled keys out across all creation endpoints; a request carrying 'Idempotency-Key: PROCESS-ME-ONCE' can be fired repeatedly with only one payment ever created.",
+      "On a retry of an already-successful request, the API returns 409 Conflict with an 'idempotent_creation_conflict' error that points back to the conflicting_resource_id, so the client can recover the original resource.",
+      "Update endpoints deliberately don't need keys because they're idempotent by nature — cancelling the same payment twice has no adverse effect."
     ]
   },
   {
-    "id": "figma-unified-parameters",
-    "title": "A Tale of Two Parameter Architectures—and How We Unified Them",
-    "source": "Figma · Jenning Chen",
-    "url": "https://www.figma.com/blog/a-tale-of-two-parameter-architectures/",
+    "id": "fowler-strong-weak-arch",
+    "title": "The strong and weak forces of architecture",
+    "source": "martinfowler.com · Evan Bottcher",
+    "url": "https://martinfowler.com/articles/strong-weak-arch.html",
     "tag": "architecture",
     "minutes": 10,
-    "summary": "Figma shipped component properties and variables months apart, each on its own architecture — and the overlap started producing inconsistent renders and slowing every new feature. Here’s how they merged two systems into one without breaking users.",
-    "relevance": "A clean case study in paying down architectural divergence: two subsystems that do ‘the same thing’ drift apart and tax every future change. Useful as you study software design — note how they unified the data model first (shared typespace + single binding) before touching the runtime.",
-    "readGuide": "~10 min. Read ‘Unifying the data model’ (shared typespace, one binding per property) and ‘Unifying the parameter runtime’ (the 4-step tracking→invalidation→resolution→update flow). Skim the product-feature backstory at the top.",
+    "summary": "Why does 'best practice' loose coupling feel like overkill inside one team but essential across a whole org? Bottcher offers a model: alignment behaves like a force that weakens with organizational distance, so the right amount of coupling depends on scope.",
+    "relevance": "A practical lens for Ziina's team boundaries and service contracts. Before demanding versioned, backward-compatible interfaces everywhere, ask the article's question: what's the blast radius? Coupling inside one team is cheap; coupling across the org is where the rigor belongs.",
+    "readGuide": "~10 min. Read the three 'forces' sections (domain / vertical / whole-of-org), then 'How do we apply this model?' — especially Integration Patterns. The MYOB org-structure detail is skimmable context.",
     "brief": [
-      "Component properties (2022, scoped per-component, mirroring code props) and variables (2023, global/library-level, themable) are both ‘set-once, apply-across’ parameter systems — but were built on separate architectures.",
-      "By 2024 the split caused user-facing bugs (a variable and a component property could bind the same layer property, giving inconsistent rendering) and made it nearly impossible to extend parametrization to new products.",
-      "Data-model fix part 1: collapse duplicate type definitions (VariableType.BOOLEAN vs ComponentPropType.BOOLEAN) into one shared typespace, which also unlocked cross-system bindings like binding a component property to a number variable.",
-      "Data-model fix part 2: one canonical way to store bindings, with each layer property bound to at most one parameter — so a future third system reuses the binding infra instead of adding a third storage scheme.",
-      "Runtime unification: every system now runs the same flow — usage tracking → invalidation → resolution → update — with invalidation tightened to the property level and a single resolution path handling transitive cases like variable aliasing.",
-      "Payoff: eliminated inconsistencies, a stable base for an upcoming third system (the Figma Sites CMS), and performance wins (faster add/delete/duplicate of variable modes) from more granular invalidation."
+      "One-size-fits-all governance is wrong at both extremes: strict rules everywhere create needless complexity and delay; total autonomy everywhere leaves teams unconstrained. The right constraints depend on context.",
+      "The model: alignment is a 'force of attraction' that weakens with organizational distance — strongest within a single team, strong within a domain of 3–5 teams, weakened across a vertical, and very weak across the whole organization.",
+      "Where the force is strong (within a domain), tighter coupling is acceptable — private API calls, events, even database-level integration carry less cost because the same people often implement both sides and can coordinate changes quickly.",
+      "Where the force is weak (whole-of-org), published APIs and events demand the highest rigor: careful schemas, versioning, backward compatibility, contracts, and deprecation strategy; highly-coupled integration like ETLs or shared databases should be avoided entirely.",
+      "The model is applied across concrete decisions — technology choices (Default/Trial/Retire within a domain vs a tech radar at org level), shared code and infrastructure, code-contribution models, and integration patterns — each loosening or tightening by scope.",
+      "The goal is 'aligned autonomy': simple models that let teams make good decisions close to the work, so you can predict in advance what will be easy and what will be hard."
     ]
   },
   {
-    "id": "cybozu-cilium-bare-metal",
-    "title": "Delivering High Performance Workflows with Cybozu and Cilium",
-    "source": "CNCF Case Study · Cybozu",
-    "url": "https://www.cncf.io/case-studies/cybozu/",
-    "tag": "kubernetes",
+    "id": "netflix-rdg-1",
+    "title": "How and Why Netflix Built a Real-Time Distributed Graph: Part 1",
+    "source": "Netflix TechBlog · Adrian Taruc & James Dalton",
+    "url": "https://netflixtechblog.com/how-and-why-netflix-built-a-real-time-distributed-graph-part-1-ingesting-and-processing-data-80113e124acc",
+    "tag": "architecture",
     "minutes": 8,
-    "summary": "How does a Japanese SaaS company move 1,000+ bare-metal servers off VMs onto Kubernetes without melting under its own load-balancing problems? Cybozu’s four-year migration leans on Cilium’s eBPF networking to make it stick.",
-    "relevance": "A grounded production migration story for your K8s learning: the hard part wasn’t pods, it was Layer-4 load balancing and network policy at scale. See why iptables-based kube-proxy didn’t cut it and what eBPF (DSR, Maglev hashing) bought them.",
-    "readGuide": "~8 min. Short case study — read ‘Scalable, Efficient Load Balancing with Cilium’ and the Key Impacts list closely. The numbers (1,000+ servers, 4+ years, 5 engineers) and the Coil+Cilium chaining detail are the keepers.",
+    "summary": "Microservices gave Netflix data isolation — and, as a side effect, siloed data nobody could join across ads, live, and games. Part 1 explains why they built a real-time graph and how a Kafka-plus-Flink pipeline turns member events into graph nodes and edges.",
+    "relevance": "A concrete lesson in the hidden cost of the microservice data isolation Ziina relies on: per-service data models make cross-domain questions expensive. Watch why they chose a streaming pipeline over batch to keep the graph fresh — the same tradeoff applies to any real-time view over wallet events.",
+    "readGuide": "~8 min (a 7-min read). The payoff is 'Kafka as the Ingestion Backbone', the Flink processor-function steps, and 'From One Job to Many' (the scaling reversal). Skim the intro business framing about ads and games.",
     "brief": [
-      "Cybozu (maker of the Kintone platform) modernized from on-prem VMs to Kubernetes on 1,000+ bare-metal servers, building its own CNI plugin ‘Coil’ — but Coil lacked load balancing and network-policy support.",
-      "Their initial Calico+Coil setup couldn’t provide enough availability for Layer-4 connectivity (TCP/UDP) or survive node failures, so they evaluated OSS, read papers, and even considered writing their own load balancer.",
-      "They adopted Cilium as the only ‘all-in-one’ fit; its eBPF-based kube-proxy replacement provides Direct Server Return for throughput, Maglev hashing for stable load distribution, and drops iptables rules for better scalability.",
-      "Cilium runs in CNI-chaining mode alongside Coil, letting Cybozu keep parts of their stack while delegating service handling, network policy, and Hubble observability to Cilium.",
-      "Results over 4+ years in production: a seamless VM→K8s migration, incrementally applicable network policies (no major rewrites), Maglev keeping services up through node failures, and Hubble tracing dropped connections during migration.",
-      "Next steps: replace the old Cilium BGP integration with the new BGP Control Plane, and eventually make Cilium the primary CNI instead of the internally-built Coil."
+      "Netflix's business expanded beyond streaming into ad-supported plans, live events, and games, creating a new need to connect a single member's interactions across devices and verticals — hard when microservices deliberately isolate each service's data.",
+      "They chose a graph representation for its relationship-centric queries (fast multi-hop traversals with no expensive joins), flexibility as new entities and connections emerge, and natural pattern/anomaly detection.",
+      "The RDG has three layers — Ingestion/Processing, Storage, and Serving; Part 1 covers ingestion, built as a stream-processing (not batch) architecture so the graph reflects the latest member actions with minimal delay.",
+      "Member actions flow through the API Gateway into Apache Kafka topics (Avro-encoded, schema-registry-backed, ~1 million messages/sec per topic) and are also persisted to Apache Iceberg tables for backfills.",
+      "Apache Flink jobs consume the streams and run processor functions that filter/project out noise, enrich events via side inputs, transform them into graph primitives (nodes and edges), and buffer/deduplicate overlapping updates in a time window using stateful timers — publishing 5M+ node+edge records/sec to Data Mesh.",
+      "A hard-won scaling lesson: one monolithic Flink job consuming all topics was untunable, so they moved to a 1:1 topic-to-job mapping (and a separate topic per node/edge type) — more operational overhead, but each job is far simpler to tune and keep stable."
+    ]
+  },
+  {
+    "id": "uber-k8s-migration",
+    "title": "Uber Completes Massive Kubernetes Migration for Microservices and Large-Scale Compute",
+    "source": "InfoQ · Claudio Masolo",
+    "url": "https://www.infoq.com/news/2025/05/uber-kubernetes-migration/",
+    "tag": "kubernetes",
+    "minutes": 6,
+    "summary": "Uber moved its entire compute platform off Apache Mesos onto Kubernetes across data centers and clouds — thousands of microservices plus heavy ML and batch workloads. This write-up distills how they did it without downtime, and the internal tooling they had to rebuild.",
+    "relevance": "A grounded reference point as you learn Kubernetes: it shows what 'migrate to K8s' actually costs at scale. Note the dual-stack, reliability-over-speed strategy and the CRD/federation patterns — the same reversible, backward-compatible playbook you'd want for any Ziina workload move.",
+    "readGuide": "~6 min news summary. Read the 'key principles' list and the dual-stack section, plus the paragraph on batch workloads (Federator, DSW-as-CRD). The two linked first-party Uber posts are the deep dive if you want more.",
+    "brief": [
+      "Uber migrated its entire compute platform from Apache Mesos to Kubernetes across multiple data centers and cloud environments, affecting thousands of microservices powering ride-hailing and delivery globally — a multi-year effort.",
+      "The strategy prioritized service reliability over migration speed: a migration framework enabled gradual transitions with full backward compatibility, and a dual-stack approach ran services on both Mesos and Kubernetes during the cutover to minimize risk.",
+      "Key principles guided the work: maintain reliability throughout, integrate seamlessly with existing tools and workflows, and establish robust monitoring and observability in the new Kubernetes environment.",
+      "A major challenge was adapting Uber's internal tooling — deployment pipelines, monitoring, and service discovery had been tightly coupled to Mesos and had to be reimplemented for Kubernetes.",
+      "For large-scale compute (ML training, data pipelines), they modeled DSW sessions as a Custom Resource Definition (CRD) and used 'Federator', a cluster-federation layer over batch clusters, so heavy batch jobs coexist with real-time services without hurting user-facing latency.",
+      "Comparable migrations bookend the story: Figma moved core services to Kubernetes in 12 months and CERN migrated its CMSWEB cluster — reinforcing the case-study value for large organizations."
     ]
   }
 ];
@@ -573,47 +573,47 @@ var TODAYS_ARTICLES = [
 // GROWTH_START
 var GROWTH_PICKS = [
   {
-    "id": "method-stoic-software",
-    "title": "A Stoic Look at Software Development",
-    "source": "Method · Engineering",
-    "url": "https://www.method.com/insights/stoic-look-at-software-development/",
+    "id": "fs-stoic-way-of-life",
+    "title": "The Stoic Way of Life",
+    "source": "Farnam Street · Shane Parrish",
+    "url": "https://fs.blog/the-stoic-way-of-life/",
     "tag": "philosophy",
     "minutes": 7,
-    "summary": "An engineer who found Stoicism through DHH maps Marcus Aurelius, Epictetus, and Seneca straight onto the daily realities of shipping software — psychological safety, agile, work/life balance, and asking for help.",
-    "relevance": "A direct translation of Stoic control and ‘the obstacle is the way’ into engineering habits you’re building: focus only on what you control (not us-east-1 going down), measure before you change, and treat blameless incident reviews as the practice.",
-    "readGuide": "~7 min. Read the ‘Overall’ Marcus Aurelius breakdown and the ‘Psychological Safety’ and ‘Work/Life Balance’ sections. The quotes are the substance; the footnote jokes are skippable.",
+    "summary": "Drawing on Ludwig Edelstein's 'The Meaning of Stoicism', this essay recovers a less-quoted side of the philosophy: not private serenity, but an 'art of life' rooted in community, work, and duty to others.",
+    "relevance": "A useful reframe against the lone-hero engineer myth. The Stoic idea that work carries its own ethics — reliability, doing right by the person who depends on it, craft as vocation — maps cleanly onto shipping payment code that others build on.",
+    "readGuide": "~7 min. Read 'The Workman' section closely (the Stoic origins of professional ethics) and 'Community'; the Family and Money sections are enriching context you can skim. Best taken slowly, one quoted passage at a time.",
     "brief": [
-      "Stoicism’s three tenets — you will die, you control only your mind, and the obstacle is the way — map cleanly onto engineering, so well the author jokes Marcus Aurelius could’ve moonlighted as a COBOL dev.",
-      "On a Marcus Aurelius passage: start where you are and measure before you change (‘lack of a signal is a signal’); don’t cut corners (write tests, mentor); ignore what you can’t control; adapt as things come (that’s Agile).",
-      "Agile through Epictetus: ‘we don’t abandon our pursuits because we despair of ever perfecting them’ — software is never done, so make small incremental improvements and don’t let perfect be the enemy of good.",
-      "Psychological safety: teams that fear deployment because ‘someone’s head will roll’ are unhealthy; presume everyone did their best with what they knew, find root cause without blame, and make deploys easy so they get safer.",
-      "Work/life balance via Seneca: your job is not the most important thing in your life; and via Marcus, asking for help is no shame — even a veteran looks up syntax constantly, because great software is a team effort.",
-      "The throughline is the dichotomy of control plus ‘the impediment to action advances action’ — stay adaptable, raise blockers, and route around Big Dumb Corporate Processes instead of resenting them."
+      "Stoicism is framed as an 'art of life' (ars vivendi) — a settled disposition that makes a person act with the certainty of an accomplished craftsman — rather than mere inspirational advice.",
+      "Unlike the Epicurean sage who dreams of living hidden, the Stoic sage can never consider himself a private individual: man is a social being who perfects himself only within community, so individual ethics is inseparably social ethics.",
+      "Stoic ethics 'imbued man's actions with a new respect for human dignity' — recognizing the equality of husband and wife, children's right to choose their own path, and the shared humanity of slaves, cutting against the established Greek view.",
+      "'The Workman' is the standout section: against the classical contempt for manual labor, the Stoics attributed value to work itself, holding that moral virtue can be realized in any station — an early precursor to professional ethics.",
+      "Work is 'moralized': a sense of responsibility, reliability, and the wish to do right toward one's customer becomes the main object of appreciation — and each profession imposes its own specific duties (the physician must not harm; the judge must stay impartial).",
+      "On money, the Stoic view is stewardship: the rich person is 'but the trustee of his wealth', holding it for family, friends, and community rather than purely for himself — a communitarian ethic distinct from both laissez-faire and utopian communism."
     ]
   },
   {
-    "id": "marcnuri-ai-async-productivity",
-    "title": "Boosting My Developer Productivity with AI in 2025",
-    "source": "Marc Nuri (Red Hat Sr. Principal Engineer)",
-    "url": "https://blog.marcnuri.com/boosting-developer-productivity-ai-2025",
+    "id": "pe-frictionless-devex",
+    "title": "Frictionless: why great developer experience can help teams win in the 'AI age'",
+    "source": "The Pragmatic Engineer · Gergely Orosz",
+    "url": "https://newsletter.pragmaticengineer.com/p/frictionless-why-great-developer",
     "tag": "workflow",
-    "minutes": 7,
-    "summary": "A senior open-source maintainer roughly doubled his daily output not by typing faster but by flipping from synchronous coding to orchestrating parallel async AI agents. He measures it honestly — and names the burnout and junior-developer costs.",
-    "relevance": "A concrete workflow blueprint as you sharpen your dev tooling: parallel CLI agents on separate git worktrees, issue-to-PR async loops you can review from your phone, and the key insight that your project’s test coverage is what makes AI actually effective.",
-    "readGuide": "~7 min. Read ‘The AI Tooling Landscape’ (autocomplete→CLI agents→issue-to-PR), ‘The Project Factor’, and ‘The Uncomfortable Truths’. Skim the intro contribution-graph anecdote; the takeaways section restates the core.",
+    "minutes": 15,
+    "summary": "AI can generate code in minutes, so why does shipping still take forever? Orosz interviews Nicole Forsgren and Abi Noda and shares two chapters of their book 'Frictionless', arguing the real bottleneck is friction — and showing how to make the business case for removing it.",
+    "relevance": "Ammunition for improving your own workflow and pitching DevEx wins at Ziina. Steal the dollar-framing (recovered developer-hours) and the SPACE-for-AI questions to audit where your tools genuinely help versus where they just move the friction elsewhere.",
+    "readGuide": "~15 min. Skim the interview (parts 1–2); the value is Chapter 9's three framings — recovering time, saving money, accelerating revenue — plus Chapter 59's SPACE-for-AI checklist and 'output to outcomes'. The company mini-cases are the memorable proof.",
     "brief": [
-      "After restructuring his workflow around AI tooling, the author’s GitHub activity jumped from ~10-15 to 25+ contributions/day; he tracked commit/PR velocity, time-to-merge, and how often he could review away from the keyboard.",
-      "He ranks tools by how they fit the workflow: autocomplete and AI-IDEs help but stay synchronous (you’re still the bottleneck); chat UIs are good for exploring; the real shift is CLI agents and issue-to-PR flows.",
-      "The breakthrough is async parallelism: run multiple Claude Code agents on separate git worktrees, or assign GitHub issues to a coding agent and review the resulting PRs — even from a phone — turning meetings and gaps into productive time.",
-      "The single biggest factor in AI effectiveness is project state: comprehensive tests, consistent patterns, black-box tests, and good docs make a codebase ‘AI-ready’; chaotic context yields chaotic output.",
-      "Honest costs: burnout risk from never disconnecting, and a ‘junior developer problem’ — AI interns do the grunt work juniors used to learn from, so orgs need deliberate apprenticeship models.",
-      "Where it shines is grunt work: he migrated YAKD’s frontend from create-react-app to Vite across 193 files (Jest→Vitest, ESLint) in minutes, and cleared long-deferred SonarCloud issues — tasks that would otherwise never get done."
+      "The premise: AI generates code fast, but products aren't shipping faster because of friction — the invisible barriers (broken tools, slow pipelines) that turn quick wins into endless delays; Orosz notes he sees little real-world speedup in the software he actually uses.",
+      "'Frictionless' is the practitioner's 'how' to Accelerate's research-backed 'why', building on DORA and SPACE with a seven-step process, org-change frameworks, and 100+ pages of workbooks.",
+      "Making the business case (Ch. 9): translate DevEx into executive language via three framings — recovering time (50 devs × 5 hrs/week × $100/hr = $1.3M/year, or '6.25 free developers'), saving money (tool consolidation, fewer incidents), and accelerating revenue.",
+      "Real cases anchor it: Etsy's $2.5M initiative (pitched as saving half the hours spent waiting on deploys) dedicated 20% of eng capacity to DevEx; Block's golden-paths consolidation delivered millions in documented savings in 12 months; Capital One cut product launches from 6–9 months to weeks.",
+      "'Storytelling matters more than exact numbers' — reasonably credible data woven into a narrative beats perfect ROI figures; eBay found every 10ms of page speed was worth millions, and DX's DXI score ties each point to ~13 minutes/week saved per developer.",
+      "On AI (Ch. 59): fundamentals still hold — SPACE and DORA stay relevant because AI amplifies bad foundations rather than masking them; add a 'Trust' dimension, measure prompting efficiency and validation effort, and shift from output (lines of code) to outcomes (time from idea to working solution)."
     ]
   }
 ];
 // GROWTH_END
 
-var TOTAL_READ_MINUTES = 51; // refreshed by scheduler
+var TOTAL_READ_MINUTES = 38; // refreshed by scheduler
 
 // ============================================================
 // STOIC QUOTES — rotates by day of year, no refresh needed
