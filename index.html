@@ -1,5 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -468,98 +467,98 @@
 // ARTICLES_START
 var TODAYS_ARTICLES = [
   {
-    "id": "mt-scale-ledger-1",
-    "title": "How to Scale a Ledger, Part I: Why Use a Ledger Database",
-    "source": "Modern Treasury · Matt McNierney",
-    "url": "https://www.moderntreasury.com/journal/how-to-scale-a-ledger-part-i",
+    "id": "stripe-idempotency-keys",
+    "title": "Designing Robust and Predictable APIs with Idempotency",
+    "source": "Stripe Engineering · Brandur Leach",
+    "url": "https://stripe.com/blog/idempotency",
+    "tag": "fintech",
+    "minutes": 8,
+    "summary": "Networks fail in exotic ways, and after a dropped connection a client cannot know whether its charge went through. The canonical essay on how idempotency keys let clients retry any money-moving call until it verifiably succeeds — exactly once.",
+    "relevance": "This is the founding document for the Idempotency-Key pattern Ziina's transfer APIs should live by. As you read, audit which of your mutating endpoints accept a client-supplied key, and whether your clients retry with backoff and jitter or just fail.",
+    "readGuide": "~8 min, fast read. The 'exactly once' section on idempotency keys and the three retry outcomes is the core; 'being a good distributed citizen' covers backoff and jitter. Skim the DNS PUT example if you know HTTP semantics.",
+    "brief": [
+      "Any call between two nodes fails three ways: the connection never establishes; the call dies mid-operation leaving work in limbo; or the operation succeeds but the response is lost. The last two are ambiguous — the client cannot tell whether retrying is safe.",
+      "The general cure is idempotent endpoints: callable any number of times with side effects occurring exactly once, so a client can simply retry until it verifiably succeeds. HTTP's PUT and DELETE are idempotent by definition — his example is a DNS API where duplicate creates are just ignored.",
+      "For operations that must happen exactly once — charging a customer — clients generate an idempotency key per logical operation. On retry, the server either processes it fresh (never saw the key), resumes or safely re-runs rolled-back work (died mid-operation), or replies with the cached result (response was lost).",
+      "Stripe implements this as the Idempotency-Key header on every POST endpoint: same key plus same payload can be retried safely, and the customer is charged once.",
+      "Retry responsibly: exponential backoff (wait proportional to 2^n failures) stops clients hammering a degraded server, and random jitter de-synchronizes retry schedules to avoid the thundering-herd problem where aligned retries re-crush a recovering server.",
+      "Stripe's Ruby client bakes the whole recipe in — automatic retries with an idempotency key, increasing backoff, jitter — and the linked implementation is ~15 lines. Closing principles: handle failures consistently (retry), safely (idempotency), responsibly (backoff + jitter)."
+    ]
+  },
+  {
+    "id": "mt-ledgers-optimistic-locking",
+    "title": "Designing the Ledgers API with Optimistic Locking",
+    "source": "Modern Treasury · Andy Qin",
+    "url": "https://www.moderntreasury.com/journal/designing-ledgers-with-optimistic-locking",
     "tag": "fintech",
     "minutes": 9,
-    "summary": "Most engineers start by embedding money logic in domain models — price on the ride, balance on the loan. This opening chapter argues why that quietly breaks at scale, and why any company moving money needs a dedicated double-entry ledger as its single source of truth.",
-    "relevance": "Directly on point for Ziina's wallet: if a user balance is a sum across bookings or a field on a domain object, it's the attribution that goes missing — not the cash. Read it asking where your true source-of-truth for balances actually lives, and whether double-entry is enforced at the source.",
-    "readGuide": "~9 min. The 80/20 is 'Why Traditional Models Fail At Scale' (the four failure modes) and 'The Fintech Translation Problem'. Read the 'Real-World Consequences' anecdote in full; skim the closing Modern Treasury product pitch.",
+    "summary": "Two concurrent requests debit the same wallet, each checks the balance first, and both pass — a phantom read lets the balance go negative. How Modern Treasury chose optimistic over pessimistic locking and exposed it through their ledger API.",
+    "relevance": "The worked example is literally a Venmo-style P2P transfer — Ziina's exact shape. As you read, check how your wallet code guards balance-check-then-debit: row locks, version columns, or hope. The parent-versioned-by-children problem maps directly to accounts and entries.",
+    "readGuide": "~9 min. The Background section with the double-debit race is the essential mental model. The Implementation section is Rails/ActiveRecord-specific — skim unless you care about the mechanics. Read The Interface closely: it's the API-design lesson.",
     "brief": [
-      "Engineers instinctively embed financial logic in domain models — price as a property of the ride, a gym's payout as a sum across bookings, remaining balance stored on the loan object — which works early but breaks as money features deepen.",
-      "Four failure modes appear at scale: reporting needs expand (every movement must be immutably recorded with source and destination), data fragments across services, performance degrades (payout crons miss deadlines, card-auth checks lag), and failure scenarios like overcharges multiply without an audit trail.",
-      "A ledger database is a simple data model — Accounts (discrete pools of value), Transactions (atomic monetary events), and Entries (the individual debits and credits) — but the business logic layered on top is where the real complexity lives.",
-      "A scalable ledger must guarantee four things: immutability (past states always retrievable), double-entry enforcement (money can't move without specifying source and destination), concurrency controls (no double-spend even when writes arrive out of order), and efficient aggregations.",
-      "The 'fintech translation problem': product engineers speak domain models (orders, rides, bookings) while finance speaks debits, credits, assets, and liabilities; events are fragmented, arrive in arcane bank formats, and come from mutable records, so reconciliation ends up manual and aggregate-only.",
-      "A real anecdote: a consumer payments company found a few million dollars 'missing' every month — not the funds, but the attribution of who they belonged to. Enforcing double-entry and immutability at the source makes money going missing architecturally impossible, like a unique index in a relational DB."
+      "The setup: a ledger API as a database for financial transactions — Lucy pays John $50, producing one ledger transaction with a debit entry against Lucy and a credit entry against John, double-entry keeping money moving rather than appearing or vanishing.",
+      "The naive guard — fetch the balance, check sufficiency, then debit — fails under concurrency: nothing stops another debit landing between the read and the write. In database terms this is a phantom read, 'a spooky name for a race condition.'",
+      "Two options in Postgres via ActiveRecord: pessimistic locking takes an exclusive row lock, but reads block too; optimistic locking adds a lock_version column, lets everyone proceed, and fails the late writer with a StaleObjectError to rescue and roll back. MT chose optimistic because ledger traffic is overwhelmingly reads.",
+      "The subtle part: the thing needing a version isn't the account row itself but the collection of its child entries. Their fix: a one-to-one 'ledger account version' record, touched in a callback whenever new ledger entries post — so editing account metadata never conflicts with posting entries.",
+      "For the API surface they considered HTTP ETags but rejected them — honoring ETags on only one resource is inconsistent, and it's ambiguous whether the version refers to the account object or its entry collection. Instead, each entry in a create-transaction request carries an optional lock_version.",
+      "If any entry's lock_version is stale, the whole database transaction rolls back and the request fails — the client re-reads and retries. When callers omit lock_version, the version counter updates asynchronously in a background job, since it only needs eventual consistency."
     ]
   },
   {
-    "id": "gocardless-idempotency",
-    "title": "Safely retrying API requests",
-    "source": "GoCardless · Lawrence Jones",
-    "url": "https://gocardless.com/blog/idempotency-keys/",
-    "tag": "fintech",
-    "minutes": 5,
-    "summary": "You POST a payment and get a 500 — or no response at all. Did the charge go through? This short, concrete piece shows how idempotency keys let you retry money-moving requests without ever risking a duplicate payment.",
-    "relevance": "The exact failure mode Ziina's transfer endpoints hit on flaky networks. Read it as a spec: every create-payment POST should carry a client-generated key, and your API should return a 409 on replay rather than silently creating a second transfer.",
-    "readGuide": "~5 min. Short and example-driven. Read the 'Why are they necessary?' framing, then study the two HTTP snippets — the Idempotency-Key request and the 409 conflict response. That's the entire lesson.",
+    "id": "aws-timeouts-retries-jitter",
+    "title": "Timeouts, Retries, and Backoff with Jitter",
+    "source": "Amazon Builders' Library · Marc Brooker",
+    "url": "https://aws.amazon.com/builders-library/timeouts-retries-and-backoff-with-jitter/",
+    "tag": "architecture",
+    "minutes": 12,
+    "summary": "Retries are 'selfish' — each one demands more of a struggling server's time, and a five-layer stack retrying three times per layer hits a failing database with 243x load. Amazon's field guide to the three tools that make partial failure survivable.",
+    "relevance": "The perfect systems-level companion to the Stripe piece above: it tells you when retrying is actively harmful. Trace one Ziina payment path end to end and count the layers that retry independently — if it's more than one, this article explains the incident you haven't had yet.",
+    "readGuide": "~12 min, Level 200, no code. Retries-and-backoff is the densest section — read it twice (amplification math, token buckets vs circuit breakers). The timeouts section's p99.9 heuristic and the 20ms war story are keepers. Jitter section is a fast finish.",
     "brief": [
-      "The problem: a POST to /payments that returns 201 clearly succeeded and a 4xx clearly failed, but a 500 or a dropped connection leaves you unable to know whether the payment was actually created.",
-      "That ambiguity forces a bad choice: assume success and take no action (risking a lost payment), or retry and risk creating a duplicate payment.",
-      "Idempotency keys solve it — unique client-supplied tokens sent as a request header that guarantee only one resource is created no matter how many times the request is sent.",
-      "GoCardless rolled keys out across all creation endpoints; a request carrying 'Idempotency-Key: PROCESS-ME-ONCE' can be fired repeatedly with only one payment ever created.",
-      "On a retry of an already-successful request, the API returns 409 Conflict with an 'idempotent_creation_conflict' error that points back to the conflicting_resource_id, so the client can recover the original resource.",
-      "Update endpoints deliberately don't need keys because they're idempotent by nature — cancelling the same payment twice has no adverse effect."
+      "Timeouts: set one on every remote call. To choose the value, pick an acceptable false-timeout rate (say 0.1%) and use the downstream service's corresponding latency percentile (p99.9). War story: a 20ms timeout fired only after deploys because it silently included TLS connection establishment — fixed by pre-warming connections before taking traffic.",
+      "Retries are selfish: a retry spends more of the server's time to raise one client's odds. Fine for rare transient faults; under overload they deepen and prolong the outage. Amazon's rule: only retry when the dependency looks healthy, stop when retries aren't improving availability.",
+      "Retry amplification is multiplicative: five call-stack layers with three tries each hit the bottom database with 243x load, making recovery nearly impossible. Best practice: retry at a single point in the stack.",
+      "Amazon avoids circuit breakers — they introduce modal, hard-to-test behavior and slow recovery. Preferred: a local token bucket that permits retries while tokens last, then throttles to a fixed rate. This has shipped in the AWS SDK since 2016.",
+      "Capped exponential backoff alone re-synchronizes clients at the cap; jitter spreads retries in time. Counterintuitive detail: for scheduled work use deterministic per-host jitter rather than pure random, so any overload reproduces as a pattern humans can root-cause.",
+      "Jitter belongs everywhere, not just retries: timers, cron jobs, periodic work. On EBS and Lambda, once-per-minute client calls aligned on second zero; getting clients to jitter them served the same workload with less capacity. And retries are only safe at all when APIs are idempotent — e.g. EC2 RunInstances' explicit client token."
     ]
   },
   {
-    "id": "fowler-strong-weak-arch",
-    "title": "The strong and weak forces of architecture",
-    "source": "martinfowler.com · Evan Bottcher",
-    "url": "https://martinfowler.com/articles/strong-weak-arch.html",
+    "id": "fowler-transitional-architecture",
+    "title": "Transitional Architecture",
+    "source": "martinfowler.com · Cartwright, Horn & Lewis",
+    "url": "https://martinfowler.com/articles/patterns-legacy-displacement/transitional-architecture.html",
     "tag": "architecture",
     "minutes": 10,
-    "summary": "Why does 'best practice' loose coupling feel like overkill inside one team but essential across a whole org? Bottcher offers a model: alignment behaves like a force that weakens with organizational distance, so the right amount of coupling depends on scope.",
-    "relevance": "A practical lens for Ziina's team boundaries and service contracts. Before demanding versioned, backward-compatible interfaces everywhere, ask the article's question: what's the blast radius? Coupling inside one team is cheap; coupling across the org is where the rigor belongs.",
-    "readGuide": "~10 min. Read the three 'forces' sections (domain / vertical / whole-of-org), then 'How do we apply this model?' — especially Integration Patterns. The MYOB org-structure detail is skimmable context.",
+    "summary": "To displace a legacy system gradually, you must build software whose entire purpose is to be thrown away — and that feels wrong to every engineer. The scaffolding argument for why disposable event routers, adapters, and mimics repay their cost.",
+    "relevance": "The named vocabulary for what Figma improvised with logical sharding: seams, mimics, anti-corruption layers, planned deletion. Next time Ziina swaps a PSP integration or refactors ledger data flows, sketch which transitional components would let you ratchet traffic over gradually and revert in seconds.",
+    "readGuide": "~10 min. How It Works and When to Use It carry the argument (~5 min). The architecture-evolution example is diagram-driven — walk the five states once in order to watch each transitional piece appear and get deleted. Follow at most one pattern link (Event Interception).",
     "brief": [
-      "One-size-fits-all governance is wrong at both extremes: strict rules everywhere create needless complexity and delay; total autonomy everywhere leaves teams unconstrained. The right constraints depend on context.",
-      "The model: alignment is a 'force of attraction' that weakens with organizational distance — strongest within a single team, strong within a domain of 3–5 teams, weakened across a vertical, and very weak across the whole organization.",
-      "Where the force is strong (within a domain), tighter coupling is acceptable — private API calls, events, even database-level integration carry less cost because the same people often implement both sides and can coordinate changes quickly.",
-      "Where the force is weak (whole-of-org), published APIs and events demand the highest rigor: careful schemas, versioning, backward compatibility, contracts, and deprecation strategy; highly-coupled integration like ETLs or shared databases should be avoided entirely.",
-      "The model is applied across concrete decisions — technology choices (Default/Trial/Retire within a domain vs a tech radar at org level), shared code and infrastructure, code-contribution models, and integration patterns — each loosening or tightening by scope.",
-      "The goal is 'aligned autonomy': simple models that let teams make good decisions close to the work, so you can predict in advance what will be easy and what will be hard."
-    ]
-  },
-  {
-    "id": "netflix-rdg-1",
-    "title": "How and Why Netflix Built a Real-Time Distributed Graph: Part 1",
-    "source": "Netflix TechBlog · Adrian Taruc & James Dalton",
-    "url": "https://netflixtechblog.com/how-and-why-netflix-built-a-real-time-distributed-graph-part-1-ingesting-and-processing-data-80113e124acc",
-    "tag": "architecture",
-    "minutes": 8,
-    "summary": "Microservices gave Netflix data isolation — and, as a side effect, siloed data nobody could join across ads, live, and games. Part 1 explains why they built a real-time graph and how a Kafka-plus-Flink pipeline turns member events into graph nodes and edges.",
-    "relevance": "A concrete lesson in the hidden cost of the microservice data isolation Ziina relies on: per-service data models make cross-domain questions expensive. Watch why they chose a streaming pipeline over batch to keep the graph fresh — the same tradeoff applies to any real-time view over wallet events.",
-    "readGuide": "~8 min (a 7-min read). The payoff is 'Kafka as the Ingestion Backbone', the Flink processor-function steps, and 'From One Job to Many' (the scaling reversal). Skim the intro business framing about ads and games.",
-    "brief": [
-      "Netflix's business expanded beyond streaming into ad-supported plans, live events, and games, creating a new need to connect a single member's interactions across devices and verticals — hard when microservices deliberately isolate each service's data.",
-      "They chose a graph representation for its relationship-centric queries (fast multi-hop traversals with no expensive joins), flexibility as new entities and connections emerge, and natural pattern/anomaly detection.",
-      "The RDG has three layers — Ingestion/Processing, Storage, and Serving; Part 1 covers ingestion, built as a stream-processing (not batch) architecture so the graph reflects the latest member actions with minimal delay.",
-      "Member actions flow through the API Gateway into Apache Kafka topics (Avro-encoded, schema-registry-backed, ~1 million messages/sec per topic) and are also persisted to Apache Iceberg tables for backfills.",
-      "Apache Flink jobs consume the streams and run processor functions that filter/project out noise, enrich events via side inputs, transform them into graph primitives (nodes and edges), and buffer/deduplicate overlapping updates in a time window using stateful timers — publishing 5M+ node+edge records/sec to Data Mesh.",
-      "A hard-won scaling lesson: one monolithic Flink job consuming all topics was untunable, so they moved to a 1:1 topic-to-job mapping (and a separate topic per node/edge type) — more operational overhead, but each job is far simpler to tune and keep stable."
+      "Core claim: safe legacy displacement is gradual, so old and new must run simultaneously with a shifting division of labor — which requires integration components that have no place in the target architecture. Bluntly: 'you will have to invest in work that will be thrown away.'",
+      "The metaphor: scaffolding on a renovation. Hiring and erecting it is unavoidable cost that enables the work, buys safety, and unlocks options — and when the job is done another team dismantles it, and you're pleased to see it go.",
+      "The toolkit: introduce seams into the monolith via Event Interception (for event flows) and Branch by Abstraction (for APIs); isolate new components behind anti-corruption layers; when legacy accesses data directly, use Legacy Mimics to keep old reports and downstream systems fed while behavior moves.",
+      "Two values to weigh against the throwaway cost: faster time-to-value (the painter's-tape analogy — a disposable gateway that feeds legacy data into a new dashboard now beats waiting for full replacement) and lower risk (migrate a subset of traffic, revert easily when something goes pear-shaped).",
+      "The worked example evolves in five states: an Event Router seam first; then a Storefront Manager isolated by an Event Transformer plus two mimics keeping the legacy database and business-critical reports alive; traffic ratchets to 100%, the legacy middleware is decommissioned, and each transitional piece is deleted on schedule.",
+      "Removal is part of the pattern: build affordances that make transitional components easy to delete, because unused leftovers complicate future maintenance. The authors' bet: teams that cost/benefit temporary software honestly will be surprised how often it repays itself."
     ]
   },
   {
     "id": "uber-k8s-migration",
-    "title": "Uber Completes Massive Kubernetes Migration for Microservices and Large-Scale Compute",
-    "source": "InfoQ · Claudio Masolo",
-    "url": "https://www.infoq.com/news/2025/05/uber-kubernetes-migration/",
+    "title": "Migrating Uber's Compute Platform to Kubernetes: A Technical Journey",
+    "source": "Uber Engineering · Aditya Bhave & Arun Krishnan",
+    "url": "https://www.uber.com/blog/migrating-ubers-compute-platform-to-kubernetes-a-technical-journey/",
     "tag": "kubernetes",
-    "minutes": 6,
-    "summary": "Uber moved its entire compute platform off Apache Mesos onto Kubernetes across data centers and clouds — thousands of microservices plus heavy ML and batch workloads. This write-up distills how they did it without downtime, and the internal tooling they had to rebuild.",
-    "relevance": "A grounded reference point as you learn Kubernetes: it shows what 'migrate to K8s' actually costs at scale. Note the dual-stack, reliability-over-speed strategy and the CRD/federation patterns — the same reversible, backward-compatible playbook you'd want for any Ziina workload move.",
-    "readGuide": "~6 min news summary. Read the 'key principles' list and the dual-stack section, plus the paragraph on batch workloads (Federator, DSW-as-CRD). The two linked first-party Uber posts are the deep dive if you want more.",
+    "minutes": 12,
+    "summary": "Uber moved 3 million cores and 4,000 services off deprecated Mesos onto Kubernetes — and service owners never noticed it happening. The tuning that got clusters to 7,500 nodes, and the k8s quirks nobody warns you about.",
+    "relevance": "A different k8s lesson than last week's pod-termination piece: what k8s defaults break in production. The Unexpected Snags section — informer replay gaps, restart-based rollback heuristics, misleading readiness — is a checklist worth knowing before Ziina's clusters hit any of it.",
+    "readGuide": "~12 min. Skim the why-Kubernetes motivation (Mesos deprecated in 2021). Slow down at Scale — the benchmark numbers and the four tuning knobs — and read Unexpected Snags closely; it's the most transferable section. Uber-specific customizations are skimmable.",
     "brief": [
-      "Uber migrated its entire compute platform from Apache Mesos to Kubernetes across multiple data centers and cloud environments, affecting thousands of microservices powering ride-hailing and delivery globally — a multi-year effort.",
-      "The strategy prioritized service reliability over migration speed: a migration framework enabled gradual transitions with full backward compatibility, and a dual-stack approach ran services on both Mesos and Kubernetes during the cutover to minimize risk.",
-      "Key principles guided the work: maintain reliability throughout, integrate seamlessly with existing tools and workflows, and establish robust monitoring and observability in the new Kubernetes environment.",
-      "A major challenge was adapting Uber's internal tooling — deployment pipelines, monitoring, and service discovery had been tightly coupled to Mesos and had to be reimplemented for Kubernetes.",
-      "For large-scale compute (ML training, data pipelines), they modeled DSW sessions as a Custom Resource Definition (CRD) and used 'Federator', a cluster-federation layer over batch clusters, so heavy batch jobs coexist with real-time services without hurting user-facing latency.",
-      "Comparable migrations bookend the story: Figma moved core services to Kubernetes in 12 months and CERN migrated its CMSWEB cluster — reinforcing the case-study value for large organizations."
+      "The scale: 50+ clusters of 5,000-7,500 hosts, ~250,000 cores and ~50,000 pods each, powering 4,000 services on ~3 million cores. 100,000 deploys a day produce 1.5 million pod launches daily — 120-130 pods/second in a single cluster.",
+      "Contrarian choice: the industry norm is many small clusters (1,500-2,000 nodes); Uber runs few large ones to avoid stranded capacity from fragmentation and control-plane overhead — at the cost of hard API-server and scheduler scaling problems.",
+      "To benchmark clusters at 7,500 nodes / 200,000 pods / 150 pods-per-second they tuned QPS and parallelism in the controller-manager and scheduler, used API Priority and Fairness to cap expensive list/get calls, switched from JSON to Proto encoding, and modified the pod-topology-spread plugin.",
+      "The migration itself required zero service-owner interaction: the Up federation layer treated new k8s clusters as low-allocation targets and rebalanced services away from full Mesos clusters automatically. At peak, 300,000 cores moved in a single week; owners didn't know which orchestrator they were on.",
+      "Snag #1: informers replay events only every 8-10 hours, so deployment events missed during controller leadership changes stalled deploys for up to 10 hours — fixed with forced reconciliation of high-level objects every 15 minutes.",
+      "Snag #2: progressDeadlineSeconds proved a slow, implicit rollback signal, and disabled or long-delay health checks made crash-looping pods look ready. Their replacement heuristic: if >10% of pods restart 5+ times during a rollout, trigger automatic rollback. Shared stateless migration hit 100% in July 2024, ~18 months end to end."
     ]
   }
 ];
@@ -573,47 +572,46 @@ var TODAYS_ARTICLES = [
 // GROWTH_START
 var GROWTH_PICKS = [
   {
-    "id": "fs-stoic-way-of-life",
-    "title": "The Stoic Way of Life",
-    "source": "Farnam Street · Shane Parrish",
-    "url": "https://fs.blog/the-stoic-way-of-life/",
+    "id": "jurgen-marcus-developer",
+    "title": "If Marcus Aurelius Were a Software Developer",
+    "source": "jurgen.si · Matic Jurglič",
+    "url": "https://jurgen.si/posts/stoicism-for-developers/",
     "tag": "philosophy",
-    "minutes": 7,
-    "summary": "Drawing on Ludwig Edelstein's 'The Meaning of Stoicism', this essay recovers a less-quoted side of the philosophy: not private serenity, but an 'art of life' rooted in community, work, and duty to others.",
-    "relevance": "A useful reframe against the lone-hero engineer myth. The Stoic idea that work carries its own ethics — reliability, doing right by the person who depends on it, craft as vocation — maps cleanly onto shipping payment code that others build on.",
-    "readGuide": "~7 min. Read 'The Workman' section closely (the Stoic origins of professional ethics) and 'Community'; the Family and Money sections are enriching context you can skim. Best taken slowly, one quoted passage at a time.",
+    "minutes": 4,
+    "summary": "Your manager is unreasonable, the backend team ships APIs you hate, and the new senior broke prod while you were watching the game. A developer rewrites Marcus Aurelius's famous morning meditation for exactly these people.",
+    "relevance": "A companion to your daily quote with one very practical move: run his developer version of the morning premeditation before standup, especially on days when a review or incident has made a coworker feel like an adversary rather than a teammate.",
+    "readGuide": "~4 min, one idea done well. Read the original Meditations 2.1 passage slowly, then his developer translation right after — those two paragraphs are the whole payload; everything around them is setup.",
     "brief": [
-      "Stoicism is framed as an 'art of life' (ars vivendi) — a settled disposition that makes a person act with the certainty of an accomplished craftsman — rather than mere inspirational advice.",
-      "Unlike the Epicurean sage who dreams of living hidden, the Stoic sage can never consider himself a private individual: man is a social being who perfects himself only within community, so individual ethics is inseparably social ethics.",
-      "Stoic ethics 'imbued man's actions with a new respect for human dignity' — recognizing the equality of husband and wife, children's right to choose their own path, and the shared humanity of slaves, cutting against the established Greek view.",
-      "'The Workman' is the standout section: against the classical contempt for manual labor, the Stoics attributed value to work itself, holding that moral virtue can be realized in any station — an early precursor to professional ethics.",
-      "Work is 'moralized': a sense of responsibility, reliability, and the wish to do right toward one's customer becomes the main object of appreciation — and each profession imposes its own specific duties (the physician must not harm; the judge must stay impartial).",
-      "On money, the Stoic view is stewardship: the rich person is 'but the trustee of his wealth', holding it for family, friends, and community rather than purely for himself — a communitarian ethic distinct from both laissez-faire and utopian communism."
+      "The trigger state: feeling that people in your org are incompetent, sloppy, or working against you — the manager, the backend team's APIs, the senior hire who broke production. His diagnosis of why anger wins: it's much easier to think about differences than similarities.",
+      "The tool is Marcus Aurelius's morning premeditation (Meditations 2.1): expect the meddling, ungrateful, arrogant, and dishonest — they act this way because they can't tell good from evil, yet they share your nature, so none of them can hurt you. 'We were born to work together like feet, hands and eyes.'",
+      "His developer translation: expect buggy, undocumented software written in long-lost contexts, bosses out of touch with reality, blatant security holes, aggressive deadlines, and customer edge cases you would never have imagined.",
+      "The turn: your senseless boss and sloppy coworker have the same motivations you do, and you are all subject to the same imperfections of reason — so anger at your own kind is unreasonable.",
+      "The close: there is no need to escape your environment to find calm, because 'when you lose your temper, you've already fallen behind.'"
     ]
   },
   {
-    "id": "pe-frictionless-devex",
-    "title": "Frictionless: why great developer experience can help teams win in the 'AI age'",
-    "source": "The Pragmatic Engineer · Gergely Orosz",
-    "url": "https://newsletter.pragmaticengineer.com/p/frictionless-why-great-developer",
+    "id": "hashimoto-large-projects",
+    "title": "My Approach to Building Large Technical Projects",
+    "source": "mitchellh.com · Mitchell Hashimoto",
+    "url": "https://mitchellh.com/writing/building-large-technical-projects",
     "tag": "workflow",
-    "minutes": 15,
-    "summary": "AI can generate code in minutes, so why does shipping still take forever? Orosz interviews Nicole Forsgren and Abi Noda and shares two chapters of their book 'Frictionless', arguing the real bottleneck is friction — and showing how to make the business case for removing it.",
-    "relevance": "Ammunition for improving your own workflow and pitching DevEx wins at Ziina. Steal the dollar-framing (recovered developer-hours) and the SPACE-for-AI questions to audit where your tools genuinely help versus where they just move the friction elsewhere.",
-    "readGuide": "~15 min. Skim the interview (parts 1–2); the value is Chapter 9's three framings — recovering time, saving money, accelerating revenue — plus Chapter 59's SPACE-for-AI checklist and 'output to outcomes'. The company mini-cases are the memorable proof.",
+    "minutes": 10,
+    "summary": "The excitement of a new project always decays — unless you rig the work so you keep seeing real results. HashiCorp's co-founder on demo-driven decomposition, told through building his own terminal emulator from scratch.",
+    "relevance": "A workflow for your k8s learning and side projects, and equally for big refactors at Ziina: pick the sub-project where results show fastest, let test counts be your progress bar, and sprint to a rough demo every week instead of polishing components.",
+    "readGuide": "~10 min. Read The Starting Line and Sprint to Demos deeply — they carry the method. Early Results is the tests-as-visibility trick. The numbered Packaging It Up recap at the end is screenshot-worthy; the footnotes are skippable.",
     "brief": [
-      "The premise: AI generates code fast, but products aren't shipping faster because of friction — the invisible barriers (broken tools, slow pipelines) that turn quick wins into endless delays; Orosz notes he sees little real-world speedup in the software he actually uses.",
-      "'Frictionless' is the practitioner's 'how' to Accelerate's research-backed 'why', building on DORA and SPACE with a seven-step process, org-change frameworks, and 100+ pages of workbooks.",
-      "Making the business case (Ch. 9): translate DevEx into executive language via three framings — recovering time (50 devs × 5 hrs/week × $100/hr = $1.3M/year, or '6.25 free developers'), saving money (tool consolidation, fewer incidents), and accelerating revenue.",
-      "Real cases anchor it: Etsy's $2.5M initiative (pitched as saving half the hours spent waiting on deploys) dedicated 20% of eng capacity to DevEx; Block's golden-paths consolidation delivered millions in documented savings in 12 months; Capital One cut product launches from 6–9 months to weeks.",
-      "'Storytelling matters more than exact numbers' — reasonably credible data woven into a narrative beats perfect ROI figures; eBay found every 10ms of page speed was worth millions, and DX's DXI score ties each point to ~13 minutes/week saved per developer.",
-      "On AI (Ch. 59): fundamentals still hold — SPACE and DORA stay relevant because AI amplifies bad foundations rather than masking them; add a 'Trust' dimension, measure prompting efficiency and validation effort, and shift from output (lines of code) to outcomes (time from idea to working solution)."
+      "Premise: motivation, not skill, is what kills large projects — the first weeks are thrilling, then decay sets in. His counter is decomposing work into chunks that each produce visible, tangible progress: 'I've not found an engineer who doesn't get excited by a good demo.'",
+      "The Starting Line: 'launchable terminal running Neovim' is a bad first goal — intuitively too big. Filter sub-projects by 'where can I see results soonest': VT parsing, blank window rendering, child-process launching. Experience mostly helps you sketch the rough shape; without it, expect to throw more away.",
+      "Early Results: backend work isn't visible, so automated tests become the progress display — watching '1 test passed' grow to '13 tests passed' is running code you wrote and seeing it work on a critical sub-component.",
+      "Sprint to Demos: build good-enough sub-components, not finished ones — in-memory data instead of the real database, inputs known up front. Target one or two demos per week. 'Do not let perfection be an enemy of progress.' Demos also give early product feedback: senior engineers who polish first sometimes discover the product itself sucks.",
+      "Build for yourself: implement only what you personally need and adopt your own software fast — he beelined to running fish and Neovim, deliberately skipping scrolling, mouse selection, and tabs. Daily-driving it surfaced the real next tasks, like arrow keys that did nothing.",
+      "The throwaway is the point: his ASCII-rendering debug CLI was deleted within days, but the day spent building it bought weeks of motivation. Deliberately disposable work as fuel — and note what he never mentions: shipping."
     ]
   }
 ];
 // GROWTH_END
 
-var TOTAL_READ_MINUTES = 38; // refreshed by scheduler
+var TOTAL_READ_MINUTES = 51; // refreshed by scheduler
 
 // ============================================================
 // STOIC QUOTES — rotates by day of year, no refresh needed
