@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -467,97 +468,98 @@
 // ARTICLES_START
 var TODAYS_ARTICLES = [
   {
-    "id": "monzo-balance-definitions",
-    "title": "How We Calculate Balances",
-    "source": "Monzo Engineering · Basma Taha",
-    "url": "https://monzo.com/blog/2022/02/18/how-we-calculate-balances",
+    "id": "uber-high-throughput-payment-processing",
+    "title": "Building High Throughput Payment Account Processing",
+    "source": "Uber Engineering · Akshay Kale & Raghav Kumar Gautam",
+    "url": "https://www.uber.com/us/en/blog/high-throughput-processing/",
     "tag": "fintech",
-    "minutes": 8,
-    "summary": "A bank discovers that 'the balance' is not one number: teams computing it with different time axes and address lists made the backend and the data warehouse disagree. How Monzo unified tens of balance types behind named, config-driven definitions.",
-    "relevance": "Ziina's wallet has the same split between what the user sees and what has actually settled. As you read, list every place your code computes a balance and ask whether two of them could ever disagree — that inconsistency is exactly the bug Monzo is fixing here.",
-    "readGuide": "~8 min, easy read. Useful Terms is the foundation — don't skim the address anatomy or the two time axes. The 'why we needed to change' list is the argument; the config screenshots near the end are skimmable.",
+    "minutes": 10,
+    "summary": "One hot user account generating tens of thousands of daily adjustments could take 21-24 hours to process — mathematically impossible to fix by moving faster. How Uber's Gulfstream team broke the sequential read-check-update-audit chain with 250ms batching to hit 30+ operations per second per account.",
+    "relevance": "Ziina almost certainly has its own 'hot account' problem — a high-volume merchant or bulk payout run that serializes against one account. Read the batching architecture as a checklist: could your wallet ledger amortize round-trips the same way, one read plus one write per batch instead of per operation?",
+    "readGuide": "~10 min. Background and Design Considerations set up the constraint; Architecture and End-to-End Flow are the core to read closely. Development Challenges and Validation Strategy cover the shadowing/traffic-amplification testing approach; skim Use Cases.",
     "brief": [
-      "Monzo's ledger is the source of truth for all money moving through the bank, built as double-entry bookkeeping: every movement has an equal and opposite movement, all entries for one movement form an EntrySet, and one microservice — service.ledger — owns it all.",
-      "Every balance is a sum of entries over a set of ledger 'addresses' — URL-like identifiers with five parts: namespace (com.monzo.account), name (main, overdraft, flex), legal entity (monzo_uk vs monzo_us), currency, and account ID.",
-      "Two balances matter most: the customer-facing available balance including pending transactions, and the interest-chargeable balance that excludes them — go £30 overdrawn on a pending card payment and top up before settlement, and you owe no overdraft interest.",
-      "The old /balances endpoint let each team pick its own time axis (committed vs reporting vs raw flake IDs) and its own address list, so the backend and the data warehouse could compute different numbers for the 'same' balance — corrupting reconciliation reports, including ones that go to regulators.",
-      "The fix is 'balance definitions': a named balance maps to one time axis plus one address list, statically generated from two config files. Callers now pass just a name like customer-facing-balance; only committed or reporting are allowed, and flake IDs are deprecated as an implementation leak.",
-      "Results: metrics and system tests comparing old vs new outputs built confidence in accuracy, the warehouse now reconciles cleanly against the backend, and the name-based interface protects the ledger from misuse — abstraction working as a guard-rail, not just tidiness."
+      "Uber's core payments platform Gulfstream is SOX-compliant and double-entry; by 2023 some 'hot' user accounts (large marketplace operators, fleet payment bursts) needed far more than the system's limit of 3-4 updates/sec — some bulk jobs took 21-24 hours to finish.",
+      "The sequential path (read state 30-70ms, check history 30-70ms, update 60-160ms, write audit log 12-70ms) totaled 130-370ms per operation, making 30+ ops/sec mathematically impossible without a different approach — batching to amortize data-store round trips.",
+      "They rejected Kafka-style batching (1-2 second consumer delays too slow for their 1-second real-time ceiling on things like card holds), sharded accounts (breaks the single-balance concept), and geographic co-location (only 2-3x gain, needed 10x) — landing on 250ms batching windows as the sweet spot.",
+      "Three-service architecture: Batch Creator groups operations into 250ms windows via Redis; Batch Process reads account state once, applies all operations in memory, and does a single atomic optimistic-locked update; Batch Post-Processing asynchronously writes the audit trail so compliance logging never blocks the critical path.",
+      "Two hard-won fixes: since machines don't agree on time, the Redis instance hosting each batch became the authoritative clock; and audit logs were shrunk to a sub-100-byte 'MicroUAC' format to stop hot accounts from blowing past storage limits at high batch frequency.",
+      "Validation combined shadow traffic (mirroring production without affecting it) with traffic amplification up to 10-15x to find breaking points before launch — the payoff was operations that took 21-24 hours now finishing in minutes."
     ]
   },
   {
-    "id": "mt-investing-ledger-challenges",
-    "title": "Key Ledgering Challenges for Investing Platforms",
-    "source": "Modern Treasury · Sahil Altekar",
-    "url": "https://www.moderntreasury.com/journal/key-ledgering-challenges-for-investing-platforms",
+    "id": "mt-homegrown-ledgers-break",
+    "title": "How and Why Homegrown Ledgers Break",
+    "source": "Modern Treasury · Lucas Rocha & Sarah Speights",
+    "url": "https://www.moderntreasury.com/journal/how-and-why-homegrown-ledgers-break",
     "tag": "fintech",
-    "minutes": 7,
-    "summary": "Your database says one thing, the clearinghouse report says another — and if the third party always wins, you overwrite your own history and lose auditability. What a ledger needs when an external intermediary sits inside your money flow.",
-    "relevance": "Swap 'clearinghouse' for card scheme or banking partner and this is Ziina's daily reality: reconciling the wallet ledger against partner settlement files. Grade your ledger against the seven-feature checklist as you read — pending vs posted, conditional debits, idempotent writes.",
-    "readGuide": "~7 min, quick and structured. The three challenge sections set up the problem; the real 80/20 is the feature checklist under Storing Data plus the five rules in Dealing with Financial Intermediaries. The two diagrams carry the architecture.",
+    "minutes": 6,
+    "summary": "The ledger you bootstrapped for your first product rarely survives your second one. Using Uber's own admitted two-year, 40-engineer rebuild as the cautionary tale, this piece maps how single-entry, bolt-on ledgers curdle into a fintech's biggest liability.",
+    "relevance": "Ziina's wallet ledger started somewhere too — read this as a mirror: which failure pattern (bolt-on tables per product, no double-entry from day one, manual reconciliation) is quietly present in your stack today, before a new product line forces a rebuild.",
+    "readGuide": "~6 min. Read 'What Happens When Ledgers Break' and 'Why Do Ledgers Break' (Evolvability, Consistency) closely — the Uber Gulfstream anecdote is the spine. 'Alternatives' and 'How Modern Treasury Can Help' are vendor-pitch; skim or skip.",
     "brief": [
-      "Three architectural pain points: balance queries must be fast and historical (live database aggregations create performance and accuracy issues for buying-power math); reconciling against clearinghouse reports where transactions settle partially, on different timings, or go missing; and bursty events like dividends, where thousands of balances update simultaneously and an unprepared system lags into timeouts.",
-      "Treating the intermediary as the definitive source is a trap: every discrepancy forces you to overwrite your own database, which damages auditability and risk management, and spawns manual investigations to explain to users and auditors what happened to a transaction.",
-      "The storage checklist, part one: pending and posted balance types so you always know where a transaction is in its lifecycle; conditional transactions that only settle if a rule holds (debit only if sufficient balance); idempotency so accidentally duplicated requests are rejected; immutability with the ability to revert to prior states during error handling.",
-      "Part two: multi-currency support that can also model arbitrary units like security counts; double-entry accounting so money is tracked simultaneously as user liability and platform asset; and versioned balances so every change traces back to its originating transaction.",
-      "Five rules for living with intermediaries: keep business logic in your own system (you know your margin rules, the clearinghouse doesn't); avoid unnecessary calls to their API — it's costly and adds latency at scale; operate in real time even when the third party doesn't; store data shaped for your own query patterns; and use your independent ledger to spot-check them, deciding deliberately when to update your records."
+      "Homegrown ledgers are usually built for a company's first product as single-entry tables on Postgres — fine at first, but every new product (Uber's example: food delivery layered onto ride-sharing) forces new infrastructure onto a design that never anticipated it.",
+      "Uber's own public account: tracking rider fares and driver payments was manageable with two tables, but adding delivery driver payouts, restaurant disbursements, tips, commissions, and wallet effects made the system so complex it blocked new feature work — the fix (Gulfstream) took two years and 40+ engineers.",
+      "Four concrete failure modes: inconsistency that creates incorrect payouts or 'money created from nothing'; non-performant balance fetches that collapse under millions of users in time-sensitive flows; a growing patchwork nobody wants to touch, so teams rebuild in parallel instead of fixing it; and reconciliation pain when double-entry was never properly adopted.",
+      "The evolvability problem: testing and building double-entry and immutability up front costs time young companies don't want to spend, so 'fix it when it breaks' becomes the default — and it catches up with you exactly when you're trying to scale.",
+      "The consistency problem: every new product means a new ledger to track its data, and without a unifying design, ledgers become a patchwork of ad hoc rules that hurts latency and demands manual reconciliation against bank statements.",
+      "Three alternatives once a ledger is broken: pay down the tech debt and rebuild in-house (you'll keep re-paying that cost as you grow); adopt a generic ERP (clunky APIs, insufficient chart-of-accounts resolution); or use a ledger-specific API built for double-entry, immutability, idempotency, and concurrency from the start."
     ]
   },
   {
-    "id": "cloudflare-nov-2025-outage",
-    "title": "Cloudflare Outage on November 18, 2025",
-    "source": "Cloudflare · Matthew Prince",
-    "url": "https://blog.cloudflare.com/18-november-2025-outage/",
+    "id": "cloudflare-workers-kv-redesign",
+    "title": "Redesigning Workers KV for Increased Availability and Faster Performance",
+    "source": "Cloudflare Blog · Alex Robinson & Tyson Trautmann",
+    "url": "https://blog.cloudflare.com/rearchitecting-workers-kv-for-redundancy/",
+    "tag": "architecture",
+    "minutes": 13,
+    "summary": "A two-hour global outage traced back to one thing: Cloudflare's key-value store had quietly drifted down to a single third-party storage backend. The full post-mortem-turned-rebuild of how they replaced it with their own database-backed architecture — cutting p99 latency from 200ms to under 5ms.",
+    "relevance": "This is the exact trade-off Ziina's infra will eventually face: when does 'reduce complexity, use one provider' quietly become a single point of failure for money-moving traffic? Read the consistency section closely — the read-your-own-write regression they caused and caught is the same bug class that would corrupt a wallet balance.",
+    "readGuide": "~13 min (site's own estimate). Background, Scaling Challenges, and Designing the Solution set up the incident; 'How KV Maintains Consistency Across Multiple Backends' is the technical core — read it in full. Results is worth it for the latency numbers; skim the rollout narrative.",
+    "brief": [
+      "On June 12, 2025, Cloudflare's Workers KV — a global key-value store backing dozens of products including Access authentication and Pages — went down for over two hours because its remaining third-party storage provider had a global outage; earlier that year Cloudflare had deliberately dropped from two providers to one to cut complexity, accepting the risk 'temporarily.'",
+      "The rebuild's target: hundreds of billions of key-value pairs, petabytes of data, millions of GETs/sec, tens of thousands of PUT/DELETEs/sec, single-digit-millisecond latency, all self-owned. They built the second backend on Cloudflare's own distributed database (already powering R2 and Durable Objects), sharded across multiple clusters with three-way replication.",
+      "Median object size is just 288 bytes — a poor fit for traditional object storage — so they built KV Storage Proxy (KVSP) to bridge HTTP-based edge traffic to binary-protocol database clusters, automatically routing larger objects (up to 25 MiB) to R2 instead.",
+      "Consistency across two backends relies on three layers: failed writes queue for background reconciliation; reads that see mismatched results trigger the same reconciliation; and background crawlers continuously scan for drift missed by the first two. Version metadata (timestamp plus nonce) decides which value is newer, and deletes use tombstones so sync never resurrects deleted data.",
+      "Mid-rollout they found a real regression: read-your-own-write (RYOW) consistency broke for some customers because the old cache-populate trick no longer scaled at their traffic. They built an adversarial test framework specifically to measure RYOW violation rates before shipping the fix.",
+      "Results: p99 internal latency for reads is now under 5ms, versus roughly 80ms p50 / 200ms p99 for the old third-party store. In CAP/PACELC terms, KV explicitly chooses availability over consistency, and latency over consistency absent a partition — a deliberate, named trade-off."
+    ]
+  },
+  {
+    "id": "discord-scylladb-control-plane",
+    "title": "How Discord Automates ScyllaDB Clusters at Scale",
+    "source": "Discord Engineering · Peter French",
+    "url": "https://discord.com/blog/how-discord-automates-scylladb-clusters-at-scale",
     "tag": "architecture",
     "minutes": 12,
-    "summary": "A routine database permissions change doubled the size of one config file — and took a large share of the web down for hours, Cloudflare's worst outage since 2019. The CEO's unusually candid postmortem of how an unwrap() panicked the internet.",
-    "relevance": "Ziina's payment path also trusts internally-generated config that flows to production continuously. Read this asking two questions: which of those files do we ingest without validation, and what's our kill switch when a 'safe' change starts flapping good/bad every five minutes?",
-    "readGuide": "~12 min. The intro plus 'How Cloudflare processes requests' carry the causal chain — read closely through the ClickHouse query-behaviour section. The impact table and timeline are skimmable; the remediation list at the end is the checklist to steal.",
+    "summary": "Standing up a full production-replica database cluster used to eat a day and a half of an engineer's undivided attention, with any mistake on step nine meaning starting over. Discord's 7-person infra team explains the Scylla Control Plane they built to turn that into a 2-hour, walk-away job.",
+    "relevance": "A template for turning fragile ops runbooks into something safer — directly transferable to Ziina's own database or k8s node operations. Steal the specific design choices: idempotency as a hard requirement for every task, explicit precondition checks instead of hardcoded sleeps, and SQLite (not a new distributed system) for job-resumability state.",
+    "readGuide": "~12 min. Read 'Lessons from the Wreckage' and 'How SCP Works' (Tasks/Workflows/Jobs) in full — the reusable design pattern, with the Rust trait and YAML workflow examples. 'Adding Nodes Without Losing Sleep' is a good worked example; skim the closing changelog section.",
     "brief": [
-      "At 11:20 UTC core traffic started failing with 5xx errors. Root cause: a ClickHouse permissions change made a metadata query — which never filtered on database name — return duplicate rows from the underlying r0 schema, doubling the Bot Management 'feature file' that ships to every machine in the network.",
-      "The proxy preallocates memory with a hard cap of 200 machine-learning features (about 60 were in use). The oversized file blew the limit, and the FL2 Rust code hit an unwrap() on an Err — a panic, and 5xx for all traffic touching the bots module.",
-      "The cruellest twist: the file regenerates every five minutes on a gradually-updating cluster, so good and bad versions alternated and the network kept recovering then failing. It looked exactly like an attack — and Cloudflare's status page, hosted entirely off their infrastructure, coincidentally went down at the same time, reinforcing the wrong hypothesis.",
-      "Failure modes differed by proxy generation: customers on the new FL2 engine saw hard 5xx errors, while the old FL engine kept serving but scored every request bot-score zero — silently false-positive-blocking real users for any customer with bot-blocking rules.",
-      "Recovery sequence: bypass the core proxy for Workers KV and Access at 13:05, stop generation and propagation of new files, manually insert a known-good file, force-restart the core proxy — main impact resolved by 14:30, fully clean at 17:06, with a long tail of restarting stuck services.",
-      "The remediations read as a portable checklist: harden ingestion of internally-generated config the way you would user input, add global kill switches for features, stop debugging/observability tooling from consuming the CPU needed for recovery, and review failure modes across every module in the request path."
+      "Discord's 7-person Persistence Infrastructure team runs dozens of ScyllaDB clusters (hundreds of nodes total) storing messages, channels, and most user data — for years they automated cluster operations 'incrementally, under pressure' with fragile Python/bash scripts requiring deep institutional knowledge to run safely.",
+      "Standing up a 'shadow cluster' — a full replica mirroring production traffic to safety-test a new ScyllaDB release before touching real data — was standard practice before any risky change, but manually took a day and a half, and any failure between steps 7-12 meant starting completely over.",
+      "Their old scripts failed three ways: unsafe (no precondition checks, easy to run against the wrong nodes), unrecoverable (any mid-sequence failure meant restarting), and hard to extend (new operations meant copying and hacking existing scripts). The rebuilt Scylla Control Plane (SCP) targeted exactly those three gaps.",
+      "SCP's core abstraction is tasks (single units of work, e.g. 'drain this node') composed into YAML-defined workflows with explicit retry counts, parallelism controls, and abort-on-failure semantics; every task must be idempotent since retries are how SCP recovers from failure — a hard design requirement, not a nice-to-have.",
+      "Jobs (a workflow run against a specific cluster) persist their state in a local SQLite database — deliberately simple over a distributed state backend — so an interrupted job resumes exactly where it left off instead of forcing an engineer to reconstruct which nodes were already touched.",
+      "Errors are classified recoverable (auto-retried per the workflow's config) versus unrecoverable (halts immediately, fires a webhook tagging the on-call engineer). Net result: the shadow-cluster ordeal now takes under two hours, most of it unattended."
     ]
   },
   {
-    "id": "discord-trillions-messages",
-    "title": "How Discord Stores Trillions of Messages",
-    "source": "Discord Engineering · Bo Ingram",
-    "url": "https://discord.com/blog/how-discord-stores-trillions-of-messages",
-    "tag": "architecture",
-    "minutes": 10,
-    "summary": "Discord picked Cassandra precisely because it would scale — and it did, along with its maintenance burden, until 177 nodes of trillion-message state were on perpetual fire. Replacing it live, with zero downtime, at 3.2 million messages per second.",
-    "relevance": "The transferable idea for Ziina isn't the database swap — it's the Rust data-service layer with request coalescing that protects hot rows. Payments has hot partitions too: a viral merchant, a promo day. Ask what sits between your API and your datastore when that happens.",
-    "readGuide": "~10 min. The 80/20 is 'Data Services Serving Data' (coalescing + consistent hashing) and 'A Very Big Migration' (dual writes, the Rust migrator). Skim the Cassandra-troubles background; the World Cup ending is dessert.",
-    "brief": [
-      "From 12 Cassandra nodes storing billions of messages in 2017 to 177 nodes holding trillions by early 2022: a high-toil cluster with frequent pages, unpredictable latency, maintenance operations too expensive to run, and JVM garbage-collection pauses needing constant tuning.",
-      "The core failure mode was hot partitions. Messages partition by channel ID plus a time bucket, so one huge server's channel concentrates traffic; reads are pricier than writes (memtable plus multiple SSTables) and run at quorum, so a single hot partition cascaded latency across the whole cluster.",
-      "Fix #1 sat above the database: intermediary 'data services' in Rust on Tokio — roughly one gRPC endpoint per query, zero business logic — doing request coalescing: concurrent requests for the same row spawn one worker that queries once and fans out to all subscribers, with consistent-hash routing by channel ID making it effective. An @everyone ping on a big server no longer melts a partition.",
-      "Fix #2: ScyllaDB — Cassandra-compatible, C++, shard-per-core, no garbage collector. Every other Discord database had migrated by 2020; messages waited until ScyllaDB shipped performant reverse queries. The new cluster ran a 'super-disk': GCP local SSDs for speed, RAID-mirrored onto persistent disks for durability.",
-      "The migration: dual writes for new data, then a historical backfill. The off-the-shelf Spark migrator estimated three months, so they rewrote it in Rust in an afternoon — token ranges checkpointed in SQLite, firehosing up to 3.2M messages/sec — cutting the estimate to nine days. It stalled at 99.9999% on an uncompacted tombstone range; one compaction later it finished, validated by shadow-reading a slice of traffic to both databases. Cutover: May 2022.",
-      "Payoff: 177 nodes shrank to 72 (9TB disks each), p99 reads fell from 40–125ms to a steady 15ms, p99 writes from 5–70ms to 5ms. During the 2022 World Cup final, Messi's penalty and Mbappé's 90-second double showed up as clean traffic spikes the database shrugged off."
-    ]
-  },
-  {
-    "id": "ona-leaving-kubernetes",
-    "title": "We're Leaving Kubernetes",
-    "source": "Ona (Gitpod) · Christian Weichel & Alejandro de Brito Fontes",
-    "url": "https://ona.com/stories/we-are-leaving-kubernetes",
+    "id": "hdfc-bank-kubernetes-governor",
+    "title": "HDFC Bank: Throttling Incoming Traffic Without Changing the Core Banking System",
+    "source": "CNCF Case Study · FYNDNA / HDFC Bank",
+    "url": "https://www.cncf.io/case-studies/hdfc-bank/",
     "tag": "kubernetes",
-    "minutes": 14,
-    "summary": "Six years, 1.5 million users, and every trick in the book — custom CFS controllers, shiftfs, seccomp notify, micro-VMs — before Gitpod concluded Kubernetes is the wrong platform for development environments. One of the most instructive k8s reads is about its limits.",
-    "relevance": "The anti-hype companion to your k8s learning: it teaches CPU throttling, cgroups, PVC behaviour, user namespaces and autoscaling by showing precisely where each breaks. It also sharpens a question worth asking about any Ziina workload: is this an application workload k8s was built for, or a system workload it wasn't?",
-    "readGuide": "~14 min, dense. Read 'Why are development environments unique' and the resource-management and security sections deeply — that's where the k8s education lives. Skim the storage experiment list and the micro-VM section; the closing Flex pitch is marketing-adjacent.",
+    "minutes": 7,
+    "summary": "You can't touch the legacy monolith at the center of a Tier One bank, but UPI transaction volume keeps climbing and timeouts are already happening. How FYNDNA built 'Governor' — a Kubernetes microservice using Dapr and KEDA — to regulate 750 million transactions a month without changing a line of the core system it protects.",
+    "relevance": "The fintech-plus-Kubernetes case study closest to Ziina's own shape: a legacy-adjacent core system that can't be rewritten, wrapped by a cloud-native throttling layer. Pay attention to the Dapr sidecar trade-off — 1-2ms added latency for mTLS, pub/sub, and resiliency 'for free' — as a pattern for your own service mesh decisions.",
+    "readGuide": "~7 min. Skim Challenge/Customer Expectations, then read 'Solution' and 'Governor Application' closely — the actual architecture (AppInterceptor, Analyser, Dapr sidecar, KEDA scaling). The generic Dapr-API bullet list can be skimmed.",
     "brief": [
-      "The setup: six years running cloud development environments on Kubernetes at internet scale — 1.5 million users, thousands of environments daily. Dev environments differ from production workloads: extremely stateful and interactive, 1-to-1 with a human who hates losing work, unpredictable spiky resource needs, and a requirement for root-like permissions.",
-      "CPU sharing fails subtly: environments idle for hours then need several cores within 100ms. cgroup counters (nr_throttled) only reveal starvation after the fact, and process priorities apply to whole process groups — so boosting VS Code's priority also boosts the compiler that's starving it. They ran second-by-second custom CFS control loops via a DaemonSet.",
-      "Memory overbooking was near-impossible before swap support in k8s 1.22, since reclaiming memory means killing processes. On storage, PVCs brought unpredictable attach/detach timing, startup reliability failures, and per-instance disk limits — gitpod.io ended up on node-local SSD RAID 0, deliberately accepting total data loss if a disk dies.",
-      "The startup-time war: ghost workspaces, then ballast pods, then cluster-autoscaler plugins for scale-ahead; for 10GB+ workspace images they tried daemonset pre-pulls, a custom layer-reuse builder, pre-baked node images, lazy pulling, and registry-facade with IPFS — concluding there is no one-size-fits-all image cache, only trade-offs.",
-      "Security consumed enormous engineering: user namespaces implemented years before k8s 1.25 supported them, filesystem UID shifting via shiftfs, a masked /proc moved into place via seccomp notify, custom eBPF device filters for FUSE, a nested network namespace to grant CAP_NET_ADMIN safely, and a runc facade so Docker could run inside workspaces at all.",
-      "The verdict is carefully scoped: Kubernetes remains a fine choice for application workloads, but for system workloads the security and operational cost is immense. Their replacement (Gitpod Flex, shipped October 2024) keeps k8s's best ideas — declarative APIs and control loops — while shedding the platform, and self-hosts in under three minutes."
+      "The problem: India's UPI payment volumes are rising fast, but core banking systems at most banks (including HDFC) are still in-house, legacy, and monolithic — effectively impossible to safely modify — so FYNDNA needed to throttle incoming traffic to protect the core system without touching it.",
+      "Their answer, Governor, runs as a Kubernetes microservice built on Dapr (Distributed Application Runtime): it went from early-2022 development to production at HDFC Bank within a year, becoming one of the fastest applications ever shipped to a Tier One bank.",
+      "Architecture: three containers per pod — AppInterceptor (connects to the core banking system, holds a local queue for rate-limited requests), Analyser (the decision engine, scraping AppInterceptor's metrics every 250ms to decide if the request rate needs to change), and a Dapr sidecar handling cross-cutting concerns.",
+      "Why Dapr specifically: mTLS service-to-service security without managing certificates, Kafka-agnostic pub/sub, platform-agnostic secrets (swap GCP Secret Manager for HashiCorp Vault with minimal effort), and OpenTelemetry observability out of the box — all for a measured 1-2ms of added latency under stress testing.",
+      "Scaling: Dapr metrics feed a KEDA ScaledObject that scales Governor's replica count directly against incoming HTTP traffic, running on Google Kubernetes Engine (GKE) — necessary because UPI transaction rate swings significantly throughout the day.",
+      "Result: HDFC Bank handles close to 750 million transactions a month, and after Governor went live, UPI transaction timeouts decreased significantly — a smoother experience the case study credits with deepening customer trust in the bank."
     ]
   }
 ];
@@ -571,46 +573,46 @@ var TODAYS_ARTICLES = [
 // GROWTH_START
 var GROWTH_PICKS = [
   {
-    "id": "zsombor-dichotomy-control",
-    "title": "Dichotomy of Control in Software",
-    "source": "zsombor.io · Zsombor Erdődy-Nagy",
-    "url": "https://zsombor.io/blog/2020/01/21/dichotomy-of-control.html",
+    "id": "dailystoic-four-productivity-principles",
+    "title": "Four Productivity Principles From The Stoics You Can Use Today",
+    "source": "Daily Stoic · Monil Shah",
+    "url": "https://dailystoic.com/productivity-principles-from-the-stoics/",
     "tag": "philosophy",
-    "minutes": 6,
-    "summary": "S3 takes down your uptime, tech debt blows up your estimate, the promo committee says 'not yet.' An engineer maps Epictetus's chief task — separating what you control from what you don't — onto four painfully familiar situations.",
-    "relevance": "A precise complement to your daily quote practice: for each stressor at Ziina this week, write the can't/can pair the way he does — you can't control the incident, the estimate surprise, or the review outcome; you can control redundancy, expectation-setting, and preparation.",
-    "readGuide": "~6 min. The four can't/can conversions are the core — read them slowly and steal the format. 'Embrace imperfection' (tests, dashboards and rollouts as double-edged swords) is the most original section; don't skip it.",
+    "minutes": 5,
+    "summary": "We try to fix procrastination by researching the 'best' productivity app, then wonder why nothing changes. Four Marcus Aurelius and Epictetus passages, read as a mindset fix instead of a tools fix — do less, visualize the whole process, separate what's yours from what isn't, redefine success as effort, not outcome.",
+    "relevance": "A direct complement to today's workflow pick: before reaching for a new tool, run your ticket queue through principle #1 (Pareto's 2-3 highest-return tasks) and principle #3 (what's actually in your control when a PR is stuck on someone else's review) — the stoic filter comes before the tool choice, not after.",
+    "readGuide": "~5 min. All four numbered sections are short and worth reading in full — each pairs one Marcus Aurelius or Epictetus quote with a concrete reframe. The closing 'Over To You' is a two-line skim.",
     "brief": [
-      "The anchor is Epictetus, Discourses II.5: the chief task in life is to identify and separate matters, so you can say clearly which are externals not under your control and which have to do with the choices you actually control.",
-      "Four engineer-shaped externals: S3 goes down and takes your availability with it; hidden tech debt invalidates a careful estimate; the promo committee calibrates you 'behind the curve'; the interviewer for your dream job carries biases and a bad day.",
-      "Each gets a can't/can conversion: you can't predict which infrastructure component blows up tomorrow — you can build redundancy and failover; you can't pre-discover all hidden complexity — you can keep stakeholders in the loop when estimates shift; you can't calibrate the promo bar — you can cultivate honest feedback with your manager and write the best packet you can.",
-      "Embrace imperfection: tests, dashboards and paranoid rollouts all help but never eliminate risk, and each is a double-edged sword — 100% coverage that slows a market-fit experiment, a 40-graph dashboard nobody reads during an incident, a month-long staging soak for a Privacy Policy header.",
-      "Having control doesn't mean overdoing it: the sweet spot is a moving target, so successful engineers iterate constantly, expect to sometimes under- or over-do things, and course-correct without drama — ideally inside a team culture of frequent experimentation on the levers you do control."
+      "Principle 1, Do Less: quoting Marcus Aurelius ('If you seek tranquility, do less... do what's essential'), the piece argues chasing a long to-do list undermines deep work — apply Pareto's 80/20 by asking of each task what the ideal outcome is, whether it can be automated, and whether it benefits anyone at all.",
+      "Principle 2, Visualize the Process to the End: starting a task with only a vague sense of the steps breeds procrastination; breaking a task into its individual steps (mind-mapping it) surfaces bottlenecks early and reveals that every step has a purpose — there's no such thing as 'grunt work' once you see the whole chain.",
+      "Principle 3, See What's in Your Control: pulling from Epictetus's core distinction, the piece applies it directly to teamwork — you can't control a colleague's pace or choices, only your own execution, so separate the steps of a process into 'mine' and 'not mine' and stop spending energy on the second category.",
+      "Principle 4, Change Your Definition of Success: since external outcomes depend on variables outside your control (luck, others' effort), the Stoic move is to measure success by effort expended rather than result achieved — reframing failure as informative rather than damning.",
+      "The piece closes on Marcus Aurelius's memento mori line — 'Think of yourself as dead. You have lived your life. Now, take what's left and live it properly' — tying the four tactical principles back to the larger stoic frame of finite time."
     ]
   },
   {
-    "id": "simonw-llms-for-code",
-    "title": "Here's How I Use LLMs to Help Me Write Code",
-    "source": "simonwillison.net · Simon Willison",
-    "url": "https://simonwillison.net/2025/Mar/11/using-llms-for-code/",
+    "id": "pragmatic-engineer-ai-tooling-2026",
+    "title": "AI Tooling for Software Engineers in 2026",
+    "source": "The Pragmatic Engineer · Gergely Orosz & Elin Nilsson",
+    "url": "https://newsletter.pragmaticengineer.com/p/ai-tooling-2026",
     "tag": "workflow",
-    "minutes": 15,
-    "summary": "If your AI-coding experiments keep disappointing you, you're not broken — the workflow is unintuitive and nobody documents it. Two-plus years of hard-won technique from the creator of Datasette, down to the exact prompts and the $0.61 receipt.",
-    "relevance": "Directly upgrades your daily tooling: try his two-mode split at Ziina this week — exploratory 'what are my options' prompting during design, then authoritarian function-signature prompts for production code, with your own manual QA as the non-negotiable final step.",
-    "readGuide": "~15 min. 'Context is king' and 'Tell them exactly what to do' are the technique core; the Claude Code colophon walkthrough is worth following prompt by prompt. Skim the tools list; the closing sections on speed and amplified expertise are the philosophy.",
+    "minutes": 9,
+    "summary": "Survey nearly 1,000 working engineers on their AI tool habits and one number jumps out: a tool that didn't exist nine months ago is now the most-used and most-loved coding tool in the industry. What Claude Code's rise, and the split between what individuals love and what enterprises mandate, says about how engineers actually choose their tools.",
+    "relevance": "A useful workflow gut-check: cross-reference the 'most-used' and 'most-loved' tool charts against what you actually run day to day at Ziina, and note the staff+ engineer finding — heaviest agent users are the most senior, not the most junior, which cuts against treating agentic tools as a junior-engineer crutch.",
+    "readGuide": "~9 min on the free portion. Sections 1-2 (Interesting Findings, Most-Used Tools) and 5 (AI Agent Usage) are the core data to read closely; sections 3, 6-8 (models, company size, demographics) are skimmable charts. Note: the piece is a paid post — the free preview covers all 8 numbered sections, but the closing 'Takeaways and full report' is paywalled.",
     "brief": [
-      "Set expectations first: LLMs are fancy autocomplete, and his working mental model is an over-confident pair programmer — lightning fast at looking things up, tireless at tedium, and prone to deeply inhuman mistakes that shouldn't discredit the machine the way they'd discredit a human colleague.",
-      "Training cut-offs shape library choice: he deliberately picks boring, stable, well-represented libraries so the model already knows them, and feeds recent usage examples into the prompt when working with anything newer.",
-      "Context is king: most of the craft is managing the conversation — seed it with existing code, drop in several full working examples as inspiration, wipe the slate and restart when a thread sours, and prefer tools that show you exactly what's in context.",
-      "Work in two distinct modes: open research ('what are options for HTTP libraries in Rust? include usage examples'), then authoritarian production mode — hand the model an exact function signature and detailed spec, like his async httpx download function that Claude produced in 15 seconds versus his own fifteen minutes.",
-      "The non-negotiables: you must test what it writes — if you haven't seen it run, it's not a working system — and treat a bad first answer as a starting point, because models will re-type and refactor dozens of times without ever getting bored.",
-      "The worked example lands it: the tools.simonwillison.net colophon page built with Claude Code in 17 minutes for $0.61, including the moment he took over from the model (a GitHub Pages setting it couldn't see). His real payoff: shipping projects he'd never otherwise justify — because LLMs amplify existing expertise rather than replace it."
+      "Claude Code, released May 2025, is now the #1 most-used AI coding tool among ~900 surveyed engineers — overtaking both GitHub Copilot and Cursor in under eight months, a faster rise than Copilot itself managed over three years in the same survey series.",
+      "AI use is now simply mainstream: 95% of respondents use AI tools at least weekly, 75% use AI for at least half their engineering work, and 56% report doing 70%+ of their work with AI assistance.",
+      "Agent adoption is rising fast — 55% now regularly use AI agents — and counterintuitively, staff+ engineers are the heaviest agent users at 63.5%, ahead of regular engineers (49.7%), engineering managers (46.1%), and directors (51.9%).",
+      "Company size predicts tool choice more than personal preference: the smallest companies run 75% Claude Code, while the largest (10,000+ employees) default to GitHub Copilot at 56% — attributed to enterprise procurement and Microsoft's bundling; some large companies (Block, Meta, Google) route around this by building in-house agents instead.",
+      "Model-wise, Anthropic's Opus and Sonnet together get more mentions for coding tasks than every other model combined, and roughly 1 in 8 respondents simply use whatever model is set as their company default rather than choosing deliberately.",
+      "Sentiment and usage reinforce each other: people who use agents regularly are roughly twice as likely to feel excited about AI (61% vs 36%) and half as likely to be skeptical (11% vs 22%) as non-users — though the survey can't fully separate whether agent use causes the optimism or optimism drives adoption."
     ]
   }
 ];
 // GROWTH_END
 
-var TOTAL_READ_MINUTES = 51; // refreshed by scheduler
+var TOTAL_READ_MINUTES = 48; // refreshed by scheduler
 
 // ============================================================
 // STOIC QUOTES — rotates by day of year, no refresh needed
