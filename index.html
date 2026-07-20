@@ -468,98 +468,98 @@
 // ARTICLES_START
 var TODAYS_ARTICLES = [
   {
-    "id": "coinbase-ledger-migration",
-    "title": "The Art of a Seamless Migration of Coinbase's Internal Ledger",
-    "source": "Coinbase Blog · Alex Ghise",
-    "url": "https://www.coinbase.com/blog/the-art-of-a-seamless-migration-of-coinbases-internal-ledger",
+    "id": "square-books-double-entry-ledger",
+    "title": "Books, an Immutable Double-Entry Accounting Database Service",
+    "source": "Square Corner Blog · Łukasz Strzałkowski",
+    "url": "https://developer.squareup.com/blog/books-an-immutable-double-entry-accounting-database-service/",
     "tag": "fintech",
-    "minutes": 7,
-    "summary": "Moving a billion-plus rows of transaction history to a new ledger sounds like it needs a war room and a maintenance window — Coinbase ran the entire cutover with neither. A widely-cited walkthrough of the dual-write, ETL-backfill pattern that let them swap ledger databases under live production traffic without missing a single write.",
-    "relevance": "Ziina's own wallet balances live in some system of record you'll eventually need to migrate or reshard — the dual-write/dual-read phased rollout, with automatic fallback to the legacy system at every stage, is a direct template for doing that without a customer-facing incident.",
-    "readGuide": "~7 min. Read \"The Setup\" and \"The Repeatable Backfill Process\" in full — that's the actual migration mechanics; skim \"Migration Requirements\" and \"The Aftermath,\" they're mostly framing.",
+    "minutes": 8,
+    "summary": "Square's old settlement ledger required an expensive group-by aggregate just to answer \"what's this merchant's balance\" — and nothing stopped a payout_id from silently going null. Their fix: a purpose-built double-entry database, Books, where the balance is never computed, only ever accumulated.",
+    "relevance": "Ziina's wallet balances are exactly this kind of hot-path aggregate — the \"book\" abstraction (one row per state, balance updated only via balanced journal entries) is a pattern worth comparing against however you currently compute a user's spendable balance.",
+    "readGuide": "~8 min. Read \"Problem\" and \"Double Entry Accounting Primitive\" closely — that's the core mental model; skim \"Modeling Double Entry Accounting in SQL\" unless you're evaluating Spanner-style horizontal scaling yourself.",
     "brief": [
-      "Coinbase migrated over 1 billion rows of corporate and customer transaction/balance data from a legacy datastore to a new PostgreSQL-based ledger service, with no scheduled maintenance and zero perceptible user impact.",
-      "The migration split into two problems: switching live reads/writes to the new service, and backfilling all historical data — handled via a four-phase dual-write/dual-read rollout (legacy only, then dual-write with legacy as source of truth, then dual-write with the new system as source of truth, then legacy code removed).",
-      "Backfill used an ETL-based approach instead of replaying writes at the application layer: transform data with SQL from the ETL'd source (a ~20-minute step they could verify before running the full pipeline), dump to S3, then bulk-load into Postgres via the aws_s3 extension.",
-      "Bulk-importing directly into indexed live tables was too slow, so they created unindexed 'backfill' copies of each table, imported into those, then rebuilt indexes using Postgres's CONCURRENTLY keyword so writes could continue during index creation.",
-      "Triggers replicated every insert, update, and delete on the live tables into the backfill tables during the import window, so when they finally flipped backfill and live tables in a single transaction, live writes continued as if nothing happened.",
-      "The full backfill-to-cutover cycle took 4-6 hours and was mostly automated, run repeatedly to shake out data-quality bugs before the final flip — described afterward as 'not a memorable' day, with no war room and no standby on-call."
+      "Square's original settlement ledger required an expensive per-merchant group-by aggregate to compute balance before every payout, couldn't split a single payment across multiple payouts, and had nothing preventing a payout_id from being nulled out — real consistency bugs at scale.",
+      "Books models money as double-entry accounting: \"books\" (e.g., Payments, Refunds, Pending Balance, Payouts) hold a cached balance that only changes via balanced \"journal entries\" — every journal entry must sum to zero across the books it touches.",
+      "Because the Pending Balance book's running total is always exactly what's owed a merchant, computing a payout became a single-row read instead of a cross-table aggregation — and payouts of arbitrary amounts became possible.",
+      "Books runs on Google Cloud Spanner for horizontal scale, using UUIDs instead of auto-incrementing IDs and interleaved tables to avoid write hotspots on timestamp-ordered data.",
+      "Because book_entries are only ever inserted, never updated, the ledger is naturally an immutable audit log — a bug that journals bad data gets corrected with a new offsetting entry, not an UPDATE statement.",
+      "At time of writing, Books managed ~20TB of data with a team of just three engineers — evidence that getting the primitive right (double-entry) does more work than adding more people."
     ]
   },
   {
-    "id": "uber-high-throughput-payment-accounts",
-    "title": "Building High Throughput Payment Account Processing",
-    "source": "Uber Engineering · Akshay Kale & Raghav Kumar Gautam",
-    "url": "https://www.uber.com/us/en/blog/high-throughput-processing/",
+    "id": "modern-treasury-hot-account-ledgers",
+    "title": "Behind the Scenes: How We Built Ledgers for High Throughput",
+    "source": "Modern Treasury Journal · Matt McNierney",
+    "url": "https://www.moderntreasury.com/journal/behind-the-scenes-how-we-built-ledgers-for-high-throughput",
     "tag": "fintech",
     "minutes": 9,
-    "summary": "A single 'hot' account — a fleet operator's daily payout run, a marketplace's bulk refund batch — could take Uber's ledger system 21 to 24 hours to finish processing sequentially. The primary-source deep dive behind a system that now handles 30+ financial updates per second per account without breaking double-entry consistency.",
-    "relevance": "If Ziina ever sees a merchant or campaign account get hammered by concurrent adjustments, this is the fuller blueprint (an InfoQ summary of this same system only covered the batching-window idea) — the MicroUAC audit format and the shadow-traffic validation strategy are the parts worth stealing for your own high-throughput accounts.",
-    "readGuide": "~9 min. Read \"Background,\" \"Architecture,\" and \"Validation Strategy\" closely — the validation section (shadowing plus traffic amplification) is the part most write-ups on this system skip. Skim \"Development Challenges\" and the trademark footnotes.",
+    "summary": "Every double-entry ledger eventually hits the same wall: one \"hot\" account — like a bank settlement account touched by nearly every transaction — becomes a lock-contention bottleneck no matter how fast the rest of the system is. Modern Treasury's fix pairs balance caching with a hybrid sync/async write path clients can choose per entry.",
+    "relevance": "Ziina's own settlement or fee accounts are the textbook \"hot account\" this piece describes — the sync/async router pattern (synchronous only where a balance lock or read-after-write is actually needed) is a direct model for keeping a shared account from throttling your whole transaction pipeline as volume grows.",
+    "readGuide": "~9 min. Read \"Balance Caching\" and \"Double-Entry at Scale\" in full — that's the actual engineering; skim \"Performance Testing\" for the throughput benchmarks and \"Scaling for Each Customer\" if cells-based multi-tenancy is relevant to you.",
     "brief": [
-      "Uber's ledger (Gulfstream) is SOX-compliant, double-entry, and immutable — but by 2023 some 'hot' accounts (fleet operators, marketplace bulk adjustments, Uber for Business subsidy campaigns) needed far more than the system's limit of 3-4 update operations per second, with sequential processing taking 130-370ms per operation.",
-      "The fix batches updates to the same account into 250-millisecond windows, then applies the whole batch as one read and one write — they explicitly rejected Kafka-based batching (1-2 second consumer delays, too slow), account sharding (breaks the single-balance concept), and geographic co-location (only a 2-3x gain against a 10x requirement).",
-      "The system is three services: Batch Creator groups incoming operations via Redis coordination, Batch Process reads account state once and applies all operations in memory with a single atomic optimistic-locking update, and Batch Post-Processing asynchronously writes the immutable audit trail so compliance work never blocks the critical path.",
-      "A subtle problem: audit logs at high batch frequency could blow past account storage limits, so Uber built a new 'MicroUAC' format under 100 bytes that still preserves idempotency guarantees — a detail that only showed up during production testing.",
-      "To validate correctness before cutover, Uber ran shadow traffic (mirroring live requests to the new system without affecting production) plus deliberate traffic amplification (10x, 15x multipliers) to find the real breaking point, comparing legacy and new account states field-by-field until they matched exactly.",
-      "Result: operations that took 21-24 hours sequentially now complete in minutes, at 30+ operations per second per account with 8-20ms effective latency per operation inside a batch."
+      "Double-entry ledgering is hard to make fast because money movement can't tolerate approximate answers (\"about $1M\" is fine for a social post, never for a balance), must be immutable/replayable, and often needs synchronous responses like debit card auths or P2P transfers.",
+      "Modern Treasury's latest load test targeted 1,200 transactions/sec (4,800 entries/sec) with 3,600 concurrent balance reads/sec — comfortably above Robinhood's, Charles Schwab's, and Shopify's reported peak trade/order rates, and within range of Stripe's Black Friday peak.",
+      "Balance reads are O(1) via three caches: a total balance cache, an effective-time cache (supports backdating entries without falsely marking a payment \"late\"), and a resulting-balance cache (powers statement-style views and point-in-time account states).",
+      "The \"hot account\" problem: in a debit-card transaction the card account can be written serially, but the bank settlement account appears in nearly every transaction company-wide, so contention on its single balance-cache row spikes write latency under load.",
+      "Their fix is a hybrid-async API: a sync/async router sends balance-locked or read-after-write entries down a synchronous path, while everything else queues in an SQS-backed async entry queue processed in batches (p90 processing time: 1 second, target ceiling: 60 seconds).",
+      "To scale independent of total customer count, Modern Treasury runs a cells-based architecture — each cell is a full deployment with its own tunable database size, queue batch sizes, connection multiplexing, and indexes, with tooling to move customers between cells as throughput needs change."
     ]
   },
   {
-    "id": "shopify-redis-mysql-inventory-reservations",
-    "title": "We Replaced Redis with MySQL for Inventory Reservations — and It Scaled",
-    "source": "Shopify Engineering · Emilie Noel",
-    "url": "https://shopify.engineering/scaling-inventory-reservations",
+    "id": "figma-postgres-horizontal-sharding",
+    "title": "How Figma's Databases Team Lived to Tell the Scale",
+    "source": "Figma Blog · Sammy Steele",
+    "url": "https://www.figma.com/blog/how-figmas-databases-team-lived-to-tell-the-scale/",
     "tag": "architecture",
-    "minutes": 9,
-    "summary": "Shopify's oversell-protection system had a correctness gap baked into its architecture — reservations lived in Redis while the inventory ledger lived in MySQL, so the two could never be updated in one atomic step. How MySQL 8's SKIP LOCKED feature let them fold both into one database, and the surprising bottleneck they found once they did.",
-    "relevance": "A close cousin of any reserve-then-claim flow Ziina's wallet or payments code might use, like holding funds during a transfer — the composite-primary-key and consistent-lock-ordering lessons are worth checking against any MySQL table you lock under concurrent writes, and the connection-tagging technique for finding 'who's holding the pool' is immediately reusable for debugging a connection-exhaustion incident.",
-    "readGuide": "~9 min. Read \"The solution: SKIP LOCKED\" and \"The real bottleneck: connections, not CPU\" in full — the second section is the actual insight of the piece. Skim \"Key technical decisions\" for the specific InnoDB gotchas if you use MySQL locking yourself; the intro and cutover sections are context you can skim.",
+    "minutes": 12,
+    "summary": "Figma's Postgres stack grew almost 100x in four years, and vertical partitioning — splitting related tables into their own databases — could only buy so much runway before some tables got too large for Postgres vacuums to keep up. Their nine-month path to horizontal sharding deliberately avoided both a database migration and a big-bang cutover.",
+    "relevance": "If Ziina's transaction or user tables ever outgrow a single Postgres instance, the \"logical sharding before physical sharding\" sequence here (roll out sharded reads/writes as views first, de-risk with feature flags, only then physically split data) is a much safer template than the all-at-once resharding most tutorials describe.",
+    "readGuide": "~12 min. Read \"Our unique approach\" and \"The logical solution\" closely — that's the core technique (colos, DBProxy, sharded views); skim the query-engine internals unless you're building your own proxy layer, and the numbers in \"We've come a long way\" are worth a glance.",
     "brief": [
-      "Shopify's reservation system held a short lock on inventory during checkout to stop two buyers claiming the same unit; for years this ran on Redis, separate from the MySQL inventory ledger, meaning the claim step (deduct on payment success) couldn't be wrapped in one atomic transaction — a real source of oversell/undersell bugs.",
-      "MySQL 8's SKIP LOCKED let them redesign around one row per sellable inventory unit instead of one row per item with a quantity column; reserving 3 units means locking and moving 3 rows in one transaction, and MySQL simply skips rows another transaction has already locked instead of making callers wait.",
-      "To keep the table from growing to the size of total inventory, they cap each item/location combination at a bounded pool of 1,000 available rows, refilled by a replenishment process — sized from observed peak reservation rates during flash sales, with a lock so only one replenishment runs at a time and no thundering herd.",
-      "Three concrete MySQL lessons from production: switch to a composite primary key to cut lock count from two per row to one; use READ COMMITTED instead of the REPEATABLE READ default to avoid gap/supremum locks blocking replenishment inserts; and standardize lock acquisition order across the reserve and claim code paths to eliminate a deadlock they hit in production.",
-      "After fixing the query-level issues, throughput still hit a ceiling with low CPU and no slow queries — the real cause was other parts of the checkout path (not reservations) holding MySQL connections longer than necessary; tagging every SQL statement with its calling business process and aggregating hold-time at the ProxySQL layer exposed exactly who was consuming the pool.",
-      "Cutover ran in 'shadow mode' — writing to both Redis and MySQL with Redis still the source of truth — rolled out gradually pod by pod, with a kill switch to revert instantly if anything looked wrong."
+      "Figma evaluated CockroachDB, TiDB, Spanner, and Vitess but rejected all of them — migrating storage engines would have meant rebuilding years of in-house Postgres expertise under aggressive growth pressure, so they built horizontal sharding on top of their existing RDS Postgres instead.",
+      "Related tables are grouped into \"colos\" (colocations) sharing one sharding key — UserID, FileID, or OrgID — so cross-table joins and full transactions still work as long as they stay within one sharding key, minimizing how much application code had to change.",
+      "They deliberately separated \"logical sharding\" (application-layer, implemented via Postgres views that make the app behave as if data were already sharded) from \"physical sharding\" (actually moving data) — logical rollout is a low-risk, percentage-based feature flag; physical sharding only happens once the logical layer is fully trusted.",
+      "A new Go service, DBProxy, sits between the app and PGBouncer with its own query parser, logical planner, and physical planner — it routes single-shard-key queries directly to one database, but queries missing a shard key trigger an expensive \"scatter-gather\" across every shard, so the team engineered their query language specifically to keep scatter-gathers rare.",
+      "Sharding keys were hashed rather than used directly, to avoid hotspots from auto-incrementing or Snowflake-style timestamp-prefixed IDs, at the cost of losing efficient range scans — a trade-off they accepted since range scans were rare in their codebase.",
+      "Their first sharded table shipped in September 2023 after nine months of work, with only 10 seconds of partial availability during the actual cutover and no latency regression — the incremental, reversible approach let them move faster than a big-bang migration would have."
     ]
   },
   {
-    "id": "infoq-architecture-advice-process",
-    "title": "Decentralizing Architectural Decisions with the Architecture Advice Process",
-    "source": "InfoQ · Ben Linders (reporting on Andrew Harmel-Law)",
-    "url": "https://www.infoq.com/news/2026/03/architecture-advice-process/",
+    "id": "harmel-law-scaling-architecture-conversationally",
+    "title": "Scaling the Practice of Architecture, Conversationally",
+    "source": "martinfowler.com · Andrew Harmel-Law",
+    "url": "https://martinfowler.com/articles/scaling-architecture-conversationally.html",
     "tag": "architecture",
-    "minutes": 5,
-    "summary": "If only a few named architects are accountable for every decision across a growing system, they either become a bottleneck or start rubber-stamping things they don't fully understand. Andrew Harmel-Law's alternative: anyone can make any architectural decision, as long as they seek advice first — a model already running at places like Xapo Bank.",
-    "relevance": "Worth reading before your next 'who owns this decision' moment at Ziina — the advice process (seek input from those affected and those with expertise, but the decision-maker stays accountable) is a concrete alternative to either waiting on a senior architect or making a risky call in a vacuum, and the named failure patterns are a good gut-check for your own team's habits.",
-    "readGuide": "~5 min, short. Read straight through — it's one continuous argument built around a single talk. The 'major failure patterns' list near the end and the lambda-vs-Kubernetes example are the most immediately actionable parts.",
+    "minutes": 14,
+    "summary": "A recent InfoQ piece introduced the idea that anyone can make an architectural decision as long as they seek advice first — this is the original, much deeper source it was reporting on, written by the technique's creator. Beyond the core rule, it lays out four concrete supporting tools that make decentralized architecture actually work.",
+    "relevance": "This is the primary source behind that InfoQ advice-process summary you may have already read — worth it for the parts the summary skipped: the actual ADR template fields, a weekly forum agenda you could copy for Ziina, and four named failure modes to watch for if you try this yourself.",
+    "readGuide": "~14 min, the longest piece this week. Read \"The most fundamental element\" and \"The Four Supporting Elements\" in full — the ADR table and the AAF agenda are directly reusable; skim \"How this typically works in practice\" and treat \"How to fail\" as a checklist to revisit after you try it.",
     "brief": [
-      "Andrew Harmel-Law's core claim: traditional architecture practice, where a few named architects decide and communicate, doesn't scale because those people can't be everywhere decisions are actually happening, and trying to be creates a flow-blocker.",
-      "His alternative, the 'architecture advice process': anyone can make any architectural decision, as long as they seek advice — not permission — from everyone affected and everyone with relevant expertise; the person who started the decision remains accountable for it regardless of what advice they receive.",
-      "Concretely, advice-givers are not gatekeepers. In Harmel-Law's own example, a systems architect can warn a team that lambdas will be slow to start and complicate state management, the team can still choose lambdas anyway, and they remain accountable for that call either way.",
-      "This is documented in production at real organizations — Harmel-Law points to a martinfowler.com case study on decentralizing the practice of architecture at Xapo Bank as a working example, not just a theory.",
-      "He names four failure patterns to watch for when adopting this: senior people quietly blocking decisions from happening ('bad decisions'), the same small group still deciding everything in practice ('old guard equals new guard'), decisions made off the record without documented advice-seeking, and a general lack of trust that others will follow the process.",
-      "The shift reframes 'architect' from a title held by a few into a practice anyone can step into, supported by others playing advice-giver, context-provider, and decision-coach roles — turning architecture from closed, hierarchical knowledge into shared, collective knowledge flow."
+      "The core mechanic, the \"Advice Process,\" has one rule and one qualifier: anyone can make an architectural decision, but before deciding they must consult everyone meaningfully affected and everyone with relevant expertise — advisors don't get veto power, but the decision-taker must seek their input, listen, and record it.",
+      "Four supporting elements make this work at scale: lightweight Architecture Decision Records (title, status, decision, context, options considered, consequences, and a dedicated \"advice\" field capturing who advised and when); a weekly Architecture Advisory Forum with a standing agenda; team-sourced architectural principles that must be S.M.A.R.T. and specific to architecture, not general practices like \"keep it simple\"; and a self-built Technology Radar reviewed quarterly or half-yearly.",
+      "A good architectural principle example given in the piece: \"Value independence of teams most highly\" — with explicit, stated implications (accepting data duplication, accepting higher combined tooling costs) rather than vague aspirational language.",
+      "Harmel-Law names four specific failure modes: senior people quietly blocking decisions (\"bad decisions\"), the same small group deciding everything despite the process (\"old guard equals new guard\"), off-the-record decisions that never reach an ADR or the forum, and — the most dangerous — architects secretly practicing \"shadow architecture\" because they don't actually trust the process.",
+      "The technique is documented as working in production, not just theory — the Xapo Bank case study, which the InfoQ piece summarized, is one of the real-world implementations Harmel-Law points to.",
+      "His closing argument: the goal isn't removing architects, it's turning \"architect\" from a title held by a few into a practice anyone can step into, with senior people shifting into advice-giver, context-provider, and decision-coach roles instead of sole decision-makers."
     ]
   },
   {
-    "id": "cncf-ingress-nginx-envoy-gateway-migration",
-    "title": "Zero-Downtime Migration from Ingress NGINX to Envoy Gateway",
-    "source": "CNCF Blog · Andrew Katsikas (Pelotech)",
-    "url": "https://www.cncf.io/blog/2026/05/25/zero-downtime-migration-from-ingress-nginx-to-envoy-gateway/",
+    "id": "cncf-michelin-open-source-kubernetes",
+    "title": "Michelin Retools to Open Source Kubernetes, Saving Time and Money",
+    "source": "CNCF Case Study",
+    "url": "https://www.cncf.io/case-studies/michelin/",
     "tag": "kubernetes",
-    "minutes": 10,
-    "summary": "Ingress NGINX is end-of-life — no security patches, no new features, an API frozen in place — so every team running it is quietly staring down a migration. Most migration guides stop at 'traffic moved'; this case study covers the cutover that technically worked but silently dropped requests, and the weighted-DNS fix that finally got to zero.",
-    "relevance": "If Ziina's ingress layer is still on Ingress NGINX, this is a direct planning reference — the weighted-DNS pattern (run both controllers live under the same hostname, shift traffic by adjusting Route 53 weights instead of swapping DNS records) is controller-agnostic and gives you an instant, no-redeploy rollback if a cutover goes wrong.",
-    "readGuide": "~10 min. Read \"A Successful Gateway API migration, but not good enough\" and \"Achieving Zero downtime with weighted DNS\" closely — that's the actual technique. Skim the controller-comparison table and \"What production actually surfaced\" for the multi-namespace hostname gotcha if you run multiple environments per cluster.",
+    "minutes": 5,
+    "summary": "When Michelin's Kubernetes vendor announced changes that would have forced an unwanted hosting strategy and cluster migration, the platform team made a call: rebuild the entire platform on open source instead of following the vendor. A year later they'd cut platform costs 44% and upgrade lead time 85% — while doubling their Kubernetes footprint.",
+    "relevance": "A useful gut-check if Ziina ever evaluates a managed Kubernetes vendor versus running open source components directly (Prometheus, Cilium, Harbor, Crossplane, Argo) — the team's honest framing of the one real trade-off, being fully on the hook when something breaks, is worth weighing against the cost and velocity numbers here.",
+    "readGuide": "~5 min, short. Read \"Rebuilding\" and \"The only challenge? On their own\" in full — that's the whole story; the \"By the numbers\" box at the end is worth a glance for the concrete before/after figures.",
     "brief": [
-      "Ingress NGINX is being retired by Kubernetes upstream (no security patches, no new features, frozen API), pushing teams toward Gateway API; the authors evaluated several Gateway API controllers against CNCF-project status, annotation parity, and support for mTLS and request buffering, and picked Envoy Gateway.",
-      "Their first cutover attempt — standing up an Envoy Gateway HTTPRoute alongside the existing Ingress and switching over — technically worked, but a polling script revealed a window of dropped requests: swapping the DNS A record meant clients kept resolving to the old address until its TTL expired, and by then the old Ingress was already gone.",
-      "The fix was weighted DNS via ExternalDNS and AWS Route 53: run the Ingress and the new HTTPRoute simultaneously under the same hostname, with the HTTPRoute's weight annotation starting at 0 (live but receiving no traffic) and the Ingress at 100; cutover means swapping the two weights, with no DNS records created or deleted.",
-      "This approach makes rollback trivial — swap the weights back, no redeploy, no DNS propagation delay — and it's controller-agnostic, working with any Gateway API implementation ExternalDNS can manage, not just Envoy Gateway specifically.",
-      "Production surfaced a requirement their test environment didn't: prior to Gateway API 1.5, hostnames had to be defined at both the cluster-level Gateway resource and the app-level HTTPRoute resource, which pulls an application concern up into infrastructure — tolerable in one namespace, a real problem across the customer's multiple per-environment namespaces.",
-      "Gateway API 1.5 ships ListenerSet to fix exactly this, letting application teams define their own listeners without touching the shared Gateway resource; Envoy Gateway has it in release-candidate as of this writing, with the authors already testing it behind a feature flag."
+      "Michelin operates 62 Kubernetes clusters across 42 locations (850 worker nodes, 450 applications, ~36,000 pods) and had spent three years on a vendor-managed Kubernetes solution before deciding to switch.",
+      "The trigger was a vendor change that would have forced Michelin into a hosting strategy and cluster migration it didn't want — combined with a company-wide push to prioritize IT talent retention and become a genuine open-source contributor, not just a consumer.",
+      "They rebuilt the platform on open source tooling in the first half of 2024 (internally branded \"MKS,\" Michelin Kubernetes Services) and spent the second half upgrading everything to the latest versions — a full crossover completed within one year.",
+      "The technology switch itself wasn't the hard part: the team had already written \"a couple hundred thousand lines of code\" over the years just to make the vendor's platform work with Michelin's internal systems, so migrating to open source reused most of that integration work and gave them faster access to new releases without vendor validation delays.",
+      "The tooling stack includes Prometheus, Harbor, Crossplane, Cilium, and Argo — all CNCF projects — and Michelin joined CNCF's end-user community partly to combat the isolation of no longer having a vendor support line, and to start contributing back.",
+      "Results: platform costs down 44%, upgrade lead time down 85%, and Kubernetes footprint doubled — with an unanticipated bonus of happier platform engineers, since they're no longer filing tickets and waiting on a third party to fix problems."
     ]
   }
 ];
@@ -573,47 +573,47 @@ var TODAYS_ARTICLES = [
 // GROWTH_START
 var GROWTH_PICKS = [
   {
-    "id": "seidl-control-what-you-can-control",
-    "title": "Control What You Can Control",
-    "source": "Richard Seidl (feat. Maryse Meinen)",
-    "url": "https://www.richard-seidl.com/en/podcast/stoicism-software-engineering/",
+    "id": "spg-stoicism-practical-guide",
+    "title": "Stoicism as a Practical Guide for Software Developers",
+    "source": "Software Planet Group · Oleksii Smirnov",
+    "url": "https://softwareplanetgroup.co.uk/stoicism-as-a-practical-guide-for-software-developers/",
     "tag": "philosophy",
-    "minutes": 8,
-    "summary": "Two people make the identical decision to quit a stable job for a startup — one gets rich when it's acquired, one goes bankrupt within a year — and everyone calls the first choice brilliant and the second reckless. Why judging decisions by their outcomes, a trap Annie Duke calls 'resulting,' is a stoic-adjacent reasoning error, and three concrete tools product teams can use instead.",
-    "relevance": "A useful lens for your next postmortem or architecture retro at Ziina — separating 'was this a good decision given what we knew' from 'did it turn out well' stops you from over-crediting a lucky call or over-punishing a sound one that got unlucky, especially relevant for payments decisions where a rare edge case can make a well-reasoned choice look bad in hindsight.",
-    "readGuide": "~8 min. Read \"Stop judging decisions by how they turned out\" and \"Decide with the 10-10-10 rule\" closely — those two sections carry the practical tools. \"Practice temperance\" and \"Build a decision log\" are worth a skim; the framing sections can be read quickly.",
+    "minutes": 5,
+    "summary": "Most stoicism-for-engineers writing stays at the level of \"control what you can control.\" This piece goes further, mapping the four classical Stoic virtues — practical wisdom, justice, courage, and temperance — onto specific, concrete engineering behaviors, from code review honesty to knowing when to stop refactoring.",
+    "relevance": "The \"hats\" metaphor and the temperance section are worth reading before your next context-switch-heavy day at Ziina — deciding not to add a dependency or refactor \"because it's interesting\" is exactly the kind of discipline that keeps a payments codebase boring and reliable, which is usually what you want.",
+    "readGuide": "~5 min. Read \"Focus and the Hats Metaphor\" and \"Temperance\" closely — they're the most actionable; the four-virtues framing (Practical Wisdom, Justice, Courage, Temperance) is worth skimming end to end since each is short.",
     "brief": [
-      "The essay's central distinction, via product coach Maryse Meinen: most of what you chase (adoption, revenue, how a launch turns out) lies outside your control; the only real territory you own is your own reasoning and response, so decision quality — not outcome — is the more honest thing to optimize for.",
-      "'Resulting,' a term from Annie Duke's Thinking in Bets, names the trap of judging a decision by how it turned out: quitting a job to join a startup that later sells for a fortune gets called brilliant, the identical decision followed by bankruptcy gets called reckless — same decision, different luck.",
-      "Premeditatio malorum, deliberately anticipating what could go wrong, is reframed as ordinary product management: build negative scenarios alongside hopeful ones the same way testers plan for what breaks, not just the happy path.",
-      "The 10-10-10 rule, borrowed from Duke, forces a decision through three time horizons — what does this mean in 10 minutes, 10 months, and 10 years — as a corrective to agile culture's tendency to optimize only for what lands by Thursday.",
-      "Temperance here means asking three questions before running any tempting experiment: do we really need to, do we really have to, and do we have to do it now — deliberately defaulting to no on backlog items unless there's a real reason for yes.",
-      "The practical takeaway is a decision log, not an outcome log: record the conditions under which you decide well or badly (rushed vs. unrushed, enough information vs. not) so that pattern becomes available to you the next time you're forced into a decision under pressure."
+      "The piece opens from Seneca's Letters to Lucilius: philosophy that doesn't help you act, decide, and think clearly is \"useless\" — it treats Stoicism as an engineering discipline of thought, not a comforting mindset.",
+      "The \"hats\" metaphor: at any moment you hold one role (programmer, spouse, parent), and most defects — technical and personal — trace back to wearing two hats at once, like fixing a bug while half-tracking Slack. Stoic focus means being fully whichever hat you're wearing right now.",
+      "Defects are reframed as the normal state of reality, not a personal failure or attack on competence — a mature developer expects them and takes deliberate steps (tests, small changes, feedback loops) to reduce their probability and blast radius rather than being emotionally derailed by them.",
+      "The four Stoic virtues get concrete engineering translations: practical wisdom is admitting when code is complex or a fix is temporary rather than self-deceiving; justice is honest code review and writing for the next maintainer, not your present self; courage is acting despite fear because tests and small steps make the fear structurally unfounded, not because you're being heroic.",
+      "Temperance — called \"the most underestimated virtue in IT\" — means not doing unnecessary things: not adopting a new framework because it's interesting, not turning every task into an architecture experiment, and accepting that \"good enough\" is actually good enough.",
+      "The closing line reframes the whole philosophy bluntly: strip away the terminology and a Stoic is just \"an adult developer — one who does not lie to themselves and does not lose focus.\""
     ]
   },
   {
-    "id": "osmani-llm-coding-workflow-2026",
-    "title": "My LLM Coding Workflow Going into 2026",
-    "source": "Addy Osmani (Elevate)",
-    "url": "https://addyo.substack.com/p/my-llm-coding-workflow-going-into",
+    "id": "pragmaticengineer-ai-impact-2026-part2",
+    "title": "AI's Impact on Software Engineers in 2026: Key Trends, Part 2",
+    "source": "The Pragmatic Engineer · Gergely Orosz & Elin Nilsson",
+    "url": "https://newsletter.pragmaticengineer.com/p/ai-impact-on-software-engineers-part-2",
     "tag": "workflow",
-    "minutes": 14,
-    "summary": "At Anthropic, roughly 90% of the code for Claude Code is now written by Claude Code itself — but that only works because of discipline most teams skip. Addy Osmani's field guide to 'AI-assisted engineering': treating the model as a fast, overconfident junior pair programmer that needs a spec, small chunks, real context, and a human who still reviews everything.",
-    "relevance": "A direct checklist against however you're currently using Claude or Copilot on Ziina's codebase — the spec-before-code habit and a CLAUDE.md-style rules file are worth setting up this week if you haven't, and the never-commit-code-you-can't-explain rule is especially worth enforcing on anything touching payments logic.",
-    "readGuide": "~14 min, the longest piece this week. Read \"Start with a clear plan,\" \"Break work into small, iterative chunks,\" and \"Keep a human in the loop\" closely — that's the operating discipline. The model-picking and rules-file sections are worth a skim; treat the rest as reference to revisit later.",
+    "minutes": 10,
+    "summary": "Over 900 engineers told The Pragmatic Engineer how AI tooling is actually changing their day-to-day work in 2026 — and the clearest finding isn't that AI helps or hurts, it's that it amplifies whatever engineering culture already existed. Teams with strong guardrails get stronger; teams without them get an accelerated mess.",
+    "relevance": "Worth reading before your next \"should we mandate more AI usage\" conversation at Ziina — the survey's core finding (AI multiplies existing practices, good or bad) is a direct argument for shoring up test coverage, ADRs, and code review discipline on payments-critical code before leaning harder on AI-generated changes there.",
+    "readGuide": "~10 min for the free portion (sections 1-4; the piece is a paid Substack post and cuts off before sections 5-7 on AI \"addiction\" and where things are headed). Read \"Adopting AI at scale is hard\" and \"Impact on codebase quality\" in full — the direct quotes from engineers are the most useful part; skim the tradeoffs section for the flow-state observations.",
     "brief": [
-      "Osmani's framing is 'AI-assisted engineering,' not 'vibe coding': use AI aggressively but stay accountable for what ships. His first rule is to never jump straight to code generation — brainstorm a detailed spec.md with the AI first (requirements, architecture decisions, data models, test strategy), then turn that into a step-by-step plan, before writing anything.",
-      "Work gets broken into small, focused chunks — implement one function or fix one bug at a time — because large, monolithic AI-generated changes tend to produce what one developer called 'a jumbled mess,' like 10 developers who never talked to each other.",
-      "Context is not optional: feed the model the actual code it needs to touch, the constraints, known pitfalls, and reference implementations rather than letting it guess — tools like gitingest or repo2txt can bundle relevant source files into a single text dump for this purpose.",
-      "Never trust output unverified — Osmani quotes Simon Willison's description of an LLM pair programmer as 'over-confident and prone to mistakes': read every snippet, run it, test it, and have a second model or session review code the first one wrote when possible.",
-      "Commit obsessively: treat every small commit as a save point you can revert to if an AI-driven change goes sideways, since LLMs can't reliably remember earlier context and a clean commit history becomes the actual record of what changed and why — agents themselves are 'fiercely competent' at using git bisect to trace bugs.",
-      "A CLAUDE.md-style rules file (style guide, lint rules, patterns to avoid) fed to the model at the start of every session measurably keeps it from drifting off-script — Osmani's closing point is that every practice on this list (specs, small steps, tests, git discipline, review) was already a hallmark of senior engineers before AI; the tools amplify whoever already has that discipline, they don't replace it."
+      "Core finding from 900+ survey responses: AI tooling doesn't change an organization's underlying engineering culture, it amplifies it — teams with strong pre-existing guardrails (testing, automation, documented architectural decisions, quality codebases) get clearer benefits from AI than teams without.",
+      "A workflow that makes one engineer \"10x\" more productive often doesn't transfer to an equally skilled colleague — several respondents describe AI productivity gains as highly idiosyncratic and dependent on finding a workflow that matches personal habits, not a global best practice.",
+      "A concrete, recurring pattern: codebase quality is decreasing due to more \"AI slop\" (duplicated, verbose, poorly abstracted code), degraded code review quality from sheer volume, and more bugs slipping through — one staff engineer flatly called it \"the death of code review.\"",
+      "The maintenance burden of AI-generated code is falling on a shrinking pool of engineers who still understand the system, while \"drive-by\" contributions from people with no context on the codebase are rising — management, according to survey respondents, often doesn't seem to notice or prioritize this.",
+      "Less experienced engineers report a rockier experience with AI tools: they spend more tokens on unproductive use, get less benefit than seniors (\"AI is a fascinating mirror... it doesn't magically convert a junior engineer into a staff engineer\"), and are increasingly not delegated the tasks that used to teach them, because seniors now hand those tasks to AI instead.",
+      "Some companies have already rolled back AI tooling after quality and incident costs became visible — one engineering lead described a \"significant deterioration\" in technical writing and reasoning quality org-wide, plus costly production incidents traced to AI-written or AI-approved code."
     ]
   }
 ];
 // GROWTH_END
 
-var TOTAL_READ_MINUTES = 40; // refreshed by scheduler
+var TOTAL_READ_MINUTES = 48; // refreshed by scheduler
 
 // ============================================================
 // STOIC QUOTES — rotates by day of year, no refresh needed
