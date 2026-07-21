@@ -468,98 +468,98 @@
 // ARTICLES_START
 var TODAYS_ARTICLES = [
   {
-    "id": "square-books-double-entry-ledger",
-    "title": "Books, an Immutable Double-Entry Accounting Database Service",
-    "source": "Square Corner Blog · Łukasz Strzałkowski",
-    "url": "https://developer.squareup.com/blog/books-an-immutable-double-entry-accounting-database-service/",
+    "id": "stripe-idempotency-keys",
+    "title": "Designing Robust and Predictable APIs with Idempotency",
+    "source": "Stripe Engineering · Brandur Leach",
+    "url": "https://stripe.com/blog/idempotency",
     "tag": "fintech",
-    "minutes": 8,
-    "summary": "Square's old settlement ledger required an expensive group-by aggregate just to answer \"what's this merchant's balance\" — and nothing stopped a payout_id from silently going null. Their fix: a purpose-built double-entry database, Books, where the balance is never computed, only ever accumulated.",
-    "relevance": "Ziina's wallet balances are exactly this kind of hot-path aggregate — the \"book\" abstraction (one row per state, balance updated only via balanced journal entries) is a pattern worth comparing against however you currently compute a user's spendable balance.",
-    "readGuide": "~8 min. Read \"Problem\" and \"Double Entry Accounting Primitive\" closely — that's the core mental model; skim \"Modeling Double Entry Accounting in SQL\" unless you're evaluating Spanner-style horizontal scaling yourself.",
+    "minutes": 6,
+    "summary": "When a charge request dies mid-flight, the client cannot know whether money moved — retrying might double-charge, not retrying might drop the payment. Stripe's canonical answer: a client-generated idempotency key that makes retrying always safe.",
+    "relevance": "This is the exact double-send problem in Ziina P2P transfers. As you read, audit your own paths: does every money-moving endpoint accept an idempotency key, and do the mobile clients actually reuse the same key when they retry?",
+    "readGuide": "~6 min, short and dense. Read \"Guaranteeing exactly once semantics\" closely — the three failure cases and what the server does in each is the core; the backoff/jitter close is a warm-up for the AWS piece in today's queue.",
     "brief": [
-      "Square's original settlement ledger required an expensive per-merchant group-by aggregate to compute balance before every payout, couldn't split a single payment across multiple payouts, and had nothing preventing a payout_id from being nulled out — real consistency bugs at scale.",
-      "Books models money as double-entry accounting: \"books\" (e.g., Payments, Refunds, Pending Balance, Payouts) hold a cached balance that only changes via balanced \"journal entries\" — every journal entry must sum to zero across the books it touches.",
-      "Because the Pending Balance book's running total is always exactly what's owed a merchant, computing a payout became a single-row read instead of a cross-table aggregation — and payouts of arbitrary amounts became possible.",
-      "Books runs on Google Cloud Spanner for horizontal scale, using UUIDs instead of auto-incrementing IDs and interleaved tables to avoid write hotspots on timestamp-ordered data.",
-      "Because book_entries are only ever inserted, never updated, the ledger is naturally an immutable audit log — a bug that journals bad data gets corrected with a new offsetting entry, not an UPDATE statement.",
-      "At time of writing, Books managed ~20TB of data with a team of just three engineers — evidence that getting the primitive right (double-entry) does more work than adding more people."
+      "Three network failure modes leave a client uncertain: the connection fails before reaching the server, the call dies mid-operation, or the operation succeeds but the response is lost — in two of the three, the client cannot know whether side effects happened.",
+      "For naturally idempotent operations HTTP already helps: PUT and DELETE are idempotent per RFC 7231, so a duplicate \"create this DNS record\" call is simply ignored with a success response.",
+      "For charge-money operations that need exactly-once semantics, the client generates a unique key per logical operation; Stripe accepts it on all mutating POST endpoints via the Idempotency-Key header.",
+      "Server behavior per failure case: unseen key → process normally; died midway → roll back via an ACID transaction or resume the work; already completed → replay the cached original response without re-executing anything.",
+      "Retries should back off exponentially (waits growing 2^n) with random jitter added, so synchronized clients don't hammer a recovering server — the thundering herd problem. Stripe's Ruby client does this automatically.",
+      "The closing principles: handle failures consistently (always retry), safely (idempotency keys), and responsibly (backoff plus jitter)."
     ]
   },
   {
-    "id": "modern-treasury-hot-account-ledgers",
-    "title": "Behind the Scenes: How We Built Ledgers for High Throughput",
-    "source": "Modern Treasury Journal · Matt McNierney",
-    "url": "https://www.moderntreasury.com/journal/behind-the-scenes-how-we-built-ledgers-for-high-throughput",
+    "id": "adyen-design-to-duty-accounting",
+    "title": "Design to Duty: The Accounting and Reporting Systems at Adyen",
+    "source": "Adyen · Willem Pino",
+    "url": "https://www.adyen.com/knowledge-hub/design-to-duty-adyen-architecture-part2",
     "tag": "fintech",
-    "minutes": 9,
-    "summary": "Every double-entry ledger eventually hits the same wall: one \"hot\" account — like a bank settlement account touched by nearly every transaction — becomes a lock-contention bottleneck no matter how fast the rest of the system is. Modern Treasury's fix pairs balance caching with a hybrid sync/async write path clients can choose per entry.",
-    "relevance": "Ziina's own settlement or fee accounts are the textbook \"hot account\" this piece describes — the sync/async router pattern (synchronous only where a balance lock or read-after-write is actually needed) is a direct model for keeping a shared account from throttling your whole transaction pipeline as volume grows.",
-    "readGuide": "~9 min. Read \"Balance Caching\" and \"Double-Entry at Scale\" in full — that's the actual engineering; skim \"Performance Testing\" for the throughput benchmarks and \"Scaling for Each Customer\" if cells-based multi-tenancy is relevant to you.",
-    "brief": [
-      "Double-entry ledgering is hard to make fast because money movement can't tolerate approximate answers (\"about $1M\" is fine for a social post, never for a balance), must be immutable/replayable, and often needs synchronous responses like debit card auths or P2P transfers.",
-      "Modern Treasury's latest load test targeted 1,200 transactions/sec (4,800 entries/sec) with 3,600 concurrent balance reads/sec — comfortably above Robinhood's, Charles Schwab's, and Shopify's reported peak trade/order rates, and within range of Stripe's Black Friday peak.",
-      "Balance reads are O(1) via three caches: a total balance cache, an effective-time cache (supports backdating entries without falsely marking a payment \"late\"), and a resulting-balance cache (powers statement-style views and point-in-time account states).",
-      "The \"hot account\" problem: in a debit-card transaction the card account can be written serially, but the bank settlement account appears in nearly every transaction company-wide, so contention on its single balance-cache row spikes write latency under load.",
-      "Their fix is a hybrid-async API: a sync/async router sends balance-locked or read-after-write entries down a synchronous path, while everything else queues in an SQS-backed async entry queue processed in batches (p90 processing time: 1 second, target ceiling: 60 seconds).",
-      "To scale independent of total customer count, Modern Treasury runs a cells-based architecture — each cell is a full deployment with its own tunable database size, queue batch sizes, connection multiplexing, and indexes, with tooling to move customers between cells as throughput needs change."
-    ]
-  },
-  {
-    "id": "figma-postgres-horizontal-sharding",
-    "title": "How Figma's Databases Team Lived to Tell the Scale",
-    "source": "Figma Blog · Sammy Steele",
-    "url": "https://www.figma.com/blog/how-figmas-databases-team-lived-to-tell-the-scale/",
-    "tag": "architecture",
     "minutes": 12,
-    "summary": "Figma's Postgres stack grew almost 100x in four years, and vertical partitioning — splitting related tables into their own databases — could only buy so much runway before some tables got too large for Postgres vacuums to keep up. Their nine-month path to horizontal sharding deliberately avoided both a database migration and a big-bang cutover.",
-    "relevance": "If Ziina's transaction or user tables ever outgrow a single Postgres instance, the \"logical sharding before physical sharding\" sequence here (roll out sharded reads/writes as views first, de-risk with feature flags, only then physically split data) is a much safer template than the all-at-once resharding most tutorials describe.",
-    "readGuide": "~12 min. Read \"Our unique approach\" and \"The logical solution\" closely — that's the core technique (colos, DBProxy, sharded views); skim the query-engine internals unless you're building your own proxy layer, and the numbers in \"We've come a long way\" are worth a glance.",
+    "summary": "Adyen's ledger accepts new records only through templates that are mathematically proven to net to zero — so summing the entire accounting system always yields 0. Then thousands of inserts per second broke Postgres, and they had to shard it.",
+    "relevance": "A third answer to the ledger-scaling question after the Square and Modern Treasury pieces you read earlier this week: Adyen picked round-robin sharding over domain keys, and their reasoning is a useful counterweight if Ziina ever debates splitting its transaction store.",
+    "readGuide": "~12 min. Read \"Accounting system\" and \"Sharding strategy\" closely — template verification and the round-robin argument are the meat; \"Connecting the edge services\" has the uptime-vs-consistency queue pattern; skim Reporting and Analysis.",
     "brief": [
-      "Figma evaluated CockroachDB, TiDB, Spanner, and Vitess but rejected all of them — migrating storage engines would have meant rebuilding years of in-house Postgres expertise under aggressive growth pressure, so they built horizontal sharding on top of their existing RDS Postgres instead.",
-      "Related tables are grouped into \"colos\" (colocations) sharing one sharding key — UserID, FileID, or OrgID — so cross-table joins and full transactions still work as long as they stay within one sharding key, minimizing how much application code had to change.",
-      "They deliberately separated \"logical sharding\" (application-layer, implemented via Postgres views that make the app behave as if data were already sharded) from \"physical sharding\" (actually moving data) — logical rollout is a low-risk, percentage-based feature flag; physical sharding only happens once the logical layer is fully trusted.",
-      "A new Go service, DBProxy, sits between the app and PGBouncer with its own query parser, logical planner, and physical planner — it routes single-shard-key queries directly to one database, but queries missing a shard key trigger an expensive \"scatter-gather\" across every shard, so the team engineered their query language specifically to keep scatter-gathers rare.",
-      "Sharding keys were hashed rather than used directly, to avoid hotspots from auto-incrementing or Snowflake-style timestamp-prefixed IDs, at the cost of losing efficient range scans — a trade-off they accepted since range scans were rare in their codebase.",
-      "Their first sharded table shipped in September 2023 after nine months of work, with only 10 seconds of partial availability during the actual cutover and no latency regression — the incremental, reversible approach let them move faster than a big-bang migration would have."
+      "Every payment is double-entry booked, and the only way to write to the ledger is through templates — recipes turning amounts and accounts into journals — mathematically verified (amounts as logical entities, proving every input combination nets to zero) on every template change.",
+      "One payment's lifetime inserts about 50 accounting rows, so accounting writes run an order of magnitude above the hundreds of transactions processed per second — which eventually outgrew a single PostgreSQL database and forced sharding into several accounting clusters.",
+      "They deliberately chose round-robin sharding over domain keys (merchant, payment method): any domain rule still needs cross-shard aggregation for the opposite dimension, complicates routing, and loses the flexibility to add or drain clusters at will.",
+      "Migration pain: a payout must come from one account, so money processed on different clusters needed new jobs passing messages back and forth to consolidate — and partner reconciliation files now go through a two-step parse-then-split framework before matching within each cluster.",
+      "Edge services prioritize uptime while accounting prioritizes consistency; the bridge is a DB-backed queue — the payment layer saves locally and a separate process forwards entries when accounting can take them, so accounting downtime never halts payment processing and a crash loses nothing.",
+      "Nearly everything runs on PostgreSQL, including a custom exactly-once streaming system built because Kafka lacked exactly-once delivery at the time — with \"will this scale 20x?\" as the internal rule of thumb for revisiting any choice."
     ]
   },
   {
-    "id": "harmel-law-scaling-architecture-conversationally",
-    "title": "Scaling the Practice of Architecture, Conversationally",
-    "source": "martinfowler.com · Andrew Harmel-Law",
-    "url": "https://martinfowler.com/articles/scaling-architecture-conversationally.html",
+    "id": "aws-timeouts-retries-jitter",
+    "title": "Timeouts, Retries, and Backoff with Jitter",
+    "source": "Amazon Builders' Library · Marc Brooker",
+    "url": "https://aws.amazon.com/builders-library/timeouts-retries-and-backoff-with-jitter/",
     "tag": "architecture",
-    "minutes": 14,
-    "summary": "A recent InfoQ piece introduced the idea that anyone can make an architectural decision as long as they seek advice first — this is the original, much deeper source it was reporting on, written by the technique's creator. Beyond the core rule, it lays out four concrete supporting tools that make decentralized architecture actually work.",
-    "relevance": "This is the primary source behind that InfoQ advice-process summary you may have already read — worth it for the parts the summary skipped: the actual ADR template fields, a weekly forum agenda you could copy for Ziina, and four named failure modes to watch for if you try this yourself.",
-    "readGuide": "~14 min, the longest piece this week. Read \"The most fundamental element\" and \"The Four Supporting Elements\" in full — the ADR table and the AAF agenda are directly reusable; skim \"How this typically works in practice\" and treat \"How to fail\" as a checklist to revisit after you try it.",
+    "minutes": 9,
+    "summary": "\"Retries are selfish\": a retrying client spends more of the server's time to raise its own odds — and stacked across five service layers, three innocent retries each become 243x load on a struggling database. Amazon's field guide to failure without amplification.",
+    "relevance": "The perfect pair for today's Stripe piece: idempotency makes retries safe, this makes them sane. Trace one Ziina payment call path as you read — count the layers that retry independently and you may find a load amplifier you didn't know you'd built.",
+    "readGuide": "~9 min. \"Retries and backoff\" is the essential section — the 243x multiplication example and the token-bucket alternative to circuit breakers; the timeout-picking heuristic (downstream p99.9) is immediately usable; skim the second half of \"Jitter\" on periodic jobs.",
     "brief": [
-      "The core mechanic, the \"Advice Process,\" has one rule and one qualifier: anyone can make an architectural decision, but before deciding they must consult everyone meaningfully affected and everyone with relevant expertise — advisors don't get veto power, but the decision-taker must seek their input, listen, and record it.",
-      "Four supporting elements make this work at scale: lightweight Architecture Decision Records (title, status, decision, context, options considered, consequences, and a dedicated \"advice\" field capturing who advised and when); a weekly Architecture Advisory Forum with a standing agenda; team-sourced architectural principles that must be S.M.A.R.T. and specific to architecture, not general practices like \"keep it simple\"; and a self-built Technology Radar reviewed quarterly or half-yearly.",
-      "A good architectural principle example given in the piece: \"Value independence of teams most highly\" — with explicit, stated implications (accepting data duplication, accepting higher combined tooling costs) rather than vague aspirational language.",
-      "Harmel-Law names four specific failure modes: senior people quietly blocking decisions (\"bad decisions\"), the same small group deciding everything despite the process (\"old guard equals new guard\"), off-the-record decisions that never reach an ADR or the forum, and — the most dangerous — architects secretly practicing \"shadow architecture\" because they don't actually trust the process.",
-      "The technique is documented as working in production, not just theory — the Xapo Bank case study, which the InfoQ piece summarized, is one of the real-world implementations Harmel-Law points to.",
-      "His closing argument: the goal isn't removing architects, it's turning \"architect\" from a title held by a few into a practice anyone can step into, with senior people shifting into advice-giver, context-provider, and decision-coach roles instead of sole decision-makers."
+      "Pick timeouts from data, not instinct: choose an acceptable false-timeout rate (say 0.1%) and set the timeout at the downstream service's matching latency percentile (p99.9), padding when p99.9 sits near p50.",
+      "Timeout scope matters: Brooker debugged a service that timed out after every deploy because its 20 ms timeout unknowingly included TLS connection establishment — fixed properly by warming connections before taking traffic.",
+      "Retries multiply across layers: a five-deep call stack with three retries per layer hits the failing database with 243x load, making recovery nearly impossible — so the best practice is to retry at a single point in the stack.",
+      "Amazon prefers token buckets to circuit breakers: each retry spends a token, so when errors spike, retrying degrades to a fixed rate instead of the hard-to-test modal behavior of an open/closed breaker — built into the AWS SDK since 2016.",
+      "Capped exponential backoff alone re-synchronizes clients at the cap; random jitter spreads them out — and jitter belongs on all timers, cron jobs, and periodic work, not just retries. For scheduled work use deterministic per-host jitter so overloads reproduce in a debuggable pattern.",
+      "Only retry what is safe (idempotent APIs — EC2 RunInstances exposes explicit client tokens for this) and only while the dependency looks healthy; when retries stop improving availability, stop retrying."
     ]
   },
   {
-    "id": "cncf-michelin-open-source-kubernetes",
-    "title": "Michelin Retools to Open Source Kubernetes, Saving Time and Money",
-    "source": "CNCF Case Study",
-    "url": "https://www.cncf.io/case-studies/michelin/",
-    "tag": "kubernetes",
-    "minutes": 5,
-    "summary": "When Michelin's Kubernetes vendor announced changes that would have forced an unwanted hosting strategy and cluster migration, the platform team made a call: rebuild the entire platform on open source instead of following the vendor. A year later they'd cut platform costs 44% and upgrade lead time 85% — while doubling their Kubernetes footprint.",
-    "relevance": "A useful gut-check if Ziina ever evaluates a managed Kubernetes vendor versus running open source components directly (Prometheus, Cilium, Harbor, Crossplane, Argo) — the team's honest framing of the one real trade-off, being fully on the hook when something breaks, is worth weighing against the cost and velocity numbers here.",
-    "readGuide": "~5 min, short. Read \"Rebuilding\" and \"The only challenge? On their own\" in full — that's the whole story; the \"By the numbers\" box at the end is worth a glance for the concrete before/after figures.",
+    "id": "discord-trillions-scylladb",
+    "title": "How Discord Stores Trillions of Messages",
+    "source": "Discord Engineering · Bo Ingram",
+    "url": "https://discord.com/blog/how-discord-stores-trillions-of-messages",
+    "tag": "architecture",
+    "minutes": 11,
+    "summary": "Discord's 177-node Cassandra message cluster had become a pager-driven \"high-toil system\": hot partitions, compaction backlogs, and GC pauses bad enough to babysit nodes by hand. The fix: ScyllaDB, a Rust services layer, and a nine-day migration of trillions of rows.",
+    "relevance": "The middle layer is the transferable idea: request coalescing (one DB query serving many identical concurrent reads) and consistent-hash routing work in front of any hot store — think a viral Ziina payment link or one celebrity account's transaction feed getting hammered.",
+    "readGuide": "~11 min. Read the Cassandra-troubles section for hot-partition mechanics and the data-services section closely; the migration story reads fast (including the 99.9999%-stuck anecdote); the World Cup coda is dessert.",
     "brief": [
-      "Michelin operates 62 Kubernetes clusters across 42 locations (850 worker nodes, 450 applications, ~36,000 pods) and had spent three years on a vendor-managed Kubernetes solution before deciding to switch.",
-      "The trigger was a vendor change that would have forced Michelin into a hosting strategy and cluster migration it didn't want — combined with a company-wide push to prioritize IT talent retention and become a genuine open-source contributor, not just a consumer.",
-      "They rebuilt the platform on open source tooling in the first half of 2024 (internally branded \"MKS,\" Michelin Kubernetes Services) and spent the second half upgrading everything to the latest versions — a full crossover completed within one year.",
-      "The technology switch itself wasn't the hard part: the team had already written \"a couple hundred thousand lines of code\" over the years just to make the vendor's platform work with Michelin's internal systems, so migrating to open source reused most of that integration work and gave them faster access to new releases without vendor validation delays.",
-      "The tooling stack includes Prometheus, Harbor, Crossplane, Cilium, and Argo — all CNCF projects — and Michelin joined CNCF's end-user community partly to combat the isolation of no longer having a vendor support line, and to start contributing back.",
-      "Results: platform costs down 44%, upgrade lead time down 85%, and Kubernetes footprint doubled — with an unanticipated bonus of happier platform engineers, since they're no longer filing tickets and waiting on a third party to fix problems."
+      "From 12 nodes and billions of messages in 2017 to 177 nodes and trillions by 2022: messages partition by channel ID plus a time bucket, so one busy channel concentrates load — and with quorum reads, a single hot partition degrades every query touching those replicas.",
+      "Cassandra reads check the memtable plus potentially several SSTables while writes just append, so a compaction backlog makes reads ever pricier — forcing the \"gossip dance\": pull a node from rotation, compact it quietly, rejoin it, repeat.",
+      "JVM garbage collection was toil on its own — GC pauses spiked latency, sometimes so badly an operator manually rebooted and babysat the node. ScyllaDB (C++, shard-per-core, no GC) had already taken every other Discord database by 2020; messages waited on ScyllaDB shipping performant reverse queries.",
+      "New Rust data services sit between the API monolith and the database, roughly one gRPC endpoint per query and deliberately zero business logic; the killer feature is request coalescing — identical concurrent requests subscribe to one worker's single DB query — plus consistent-hash routing on channel ID to make coalescing bite.",
+      "ScyllaDB's Spark migrator estimated three months for historical data; Discord rewrote the migrator in Rust in an afternoon, firehosed up to 3.2 million messages per second, and finished in nine days — after compacting a token range of ancient tombstones that stalled it at \"99.9999% complete.\"",
+      "Since the May 2022 cutover: 177 nodes became 72 (9 TB each vs 4 TB), historical-read p99 fell from 40–125 ms to 15 ms, insert p99 from 5–70 ms to a steady 5 ms — enough headroom that World Cup goal spikes were dashboard entertainment, not incidents."
+    ]
+  },
+  {
+    "id": "learnkube-graceful-shutdown",
+    "title": "Graceful Shutdown in Kubernetes",
+    "source": "LearnKube (learnk8s) · Daniele Polencic",
+    "url": "https://learnkube.com/graceful-shutdown",
+    "tag": "kubernetes",
+    "minutes": 20,
+    "summary": "Pod creation is sequential, but deletion is parallel: the kubelet starts killing the pod at the same instant endpoint removal begins propagating to kube-proxy, ingress, and CoreDNS. Lose that race and Kubernetes routes live traffic to a pod that no longer exists.",
+    "relevance": "Directly applicable the next time a Ziina service deploy drops in-flight requests: the fix is a ~15-second do-nothing window on SIGTERM (or a preStop sleep), and the rainbow-deployment pattern at the end answers websockets and long-running jobs.",
+    "readGuide": "~20 min of long-form with ~45 diagrams doing the heavy lifting. Read the deletion-race walkthrough and the graceful-shutdown remedy deeply; skim the five-language SIGTERM samples (pick yours); don't skip the short rainbow-deployments finale.",
+    "brief": [
+      "An endpoint (pod IP + port) is the currency of Kubernetes routing: kube-proxy's iptables rules, ingress controllers, CoreDNS, service meshes, and Prometheus all subscribe to endpoint changes — each propagating updates on its own schedule with no coordination.",
+      "Deletion fires two parallel tracks: the endpoint controller starts telling subscribers to drop the IP while the kubelet simultaneously starts destroying the pod — Kubernetes never waits for routing to catch up, and that gap is exactly where dropped requests come from.",
+      "Termination order: preStop hook, then SIGTERM, then SIGKILL when terminationGracePeriodSeconds (default 30s) expires — and preStop eats the same 30-second budget: a 25-second hook leaves your process just 5 seconds after SIGTERM.",
+      "The remedy is deliberately boring: on SIGTERM keep serving as if nothing happened for ~15 seconds while endpoint removal propagates, then drain in-flight requests, close persistent connections (DBs, websockets), and exit — or preStop-sleep 15 if you can't touch the code.",
+      "Don't overextend shutdown: 40 replicas draining 120 seconds means a rolling update briefly runs 80 pods — enough to wake the cluster autoscaler — and Prometheus stops scraping the moment the endpoint is removed, so long terminations run blind.",
+      "For websockets and hours-long jobs, a 3-hour grace period breaks liveness probes and observability; the better pattern is rainbow deployments — a fresh Deployment per release, the old one draining until KEDA or a human scales it to zero."
     ]
   }
 ];
@@ -573,47 +573,47 @@ var TODAYS_ARTICLES = [
 // GROWTH_START
 var GROWTH_PICKS = [
   {
-    "id": "spg-stoicism-practical-guide",
-    "title": "Stoicism as a Practical Guide for Software Developers",
-    "source": "Software Planet Group · Oleksii Smirnov",
-    "url": "https://softwareplanetgroup.co.uk/stoicism-as-a-practical-guide-for-software-developers/",
+    "id": "cermati-stoic-philosophy-engineering",
+    "title": "Stoic Philosophy and Software Engineering",
+    "source": "Cermati Tech Blog · Edwin Tunggawan",
+    "url": "https://medium.com/cermati-tech/stoic-philosophy-and-software-engineering-3bb45a03de09",
     "tag": "philosophy",
-    "minutes": 5,
-    "summary": "Most stoicism-for-engineers writing stays at the level of \"control what you can control.\" This piece goes further, mapping the four classical Stoic virtues — practical wisdom, justice, courage, and temperance — onto specific, concrete engineering behaviors, from code review honesty to knowing when to stop refactoring.",
-    "relevance": "The \"hats\" metaphor and the temperance section are worth reading before your next context-switch-heavy day at Ziina — deciding not to add a dependency or refactor \"because it's interesting\" is exactly the kind of discipline that keeps a payments codebase boring and reliable, which is usually what you want.",
-    "readGuide": "~5 min. Read \"Focus and the Hats Metaphor\" and \"Temperance\" closely — they're the most actionable; the four-virtues framing (Practical Wisdom, Justice, Courage, Temperance) is worth skimming end to end since each is short.",
+    "minutes": 15,
+    "summary": "An engineer at an Indonesian fintech reads Meditations and maps it onto payment systems — including a bank API that silently changed \"OK\" to \"ok\" and marked every successful payment as failed. The dichotomy of control, rendered as defensive integration design.",
+    "relevance": "The central war story is literally your domain: a wallet trusting a bank partner's response contract and paying for it. The DISPUTE-state fix — never letting ambiguous partner responses collapse into success or failure — is worth checking against Ziina's own bank and PSP integrations.",
+    "readGuide": "~15 min but skimmable. \"Implementing the System\" is essential — read the service-B story end to end; \"Responding to Feedback\" (quick-and-dirty vs best practice) earns its minutes; skim \"Retiring Old Components\" and \"Anticipating Future Needs\".",
     "brief": [
-      "The piece opens from Seneca's Letters to Lucilius: philosophy that doesn't help you act, decide, and think clearly is \"useless\" — it treats Stoicism as an engineering discipline of thought, not a comforting mindset.",
-      "The \"hats\" metaphor: at any moment you hold one role (programmer, spouse, parent), and most defects — technical and personal — trace back to wearing two hats at once, like fixing a bug while half-tracking Slack. Stoic focus means being fully whichever hat you're wearing right now.",
-      "Defects are reframed as the normal state of reality, not a personal failure or attack on competence — a mature developer expects them and takes deliberate steps (tests, small changes, feedback loops) to reduce their probability and blast radius rather than being emotionally derailed by them.",
-      "The four Stoic virtues get concrete engineering translations: practical wisdom is admitting when code is complex or a fix is temporary rather than self-deceiving; justice is honest code review and writing for the next maintainer, not your present self; courage is acting despite fear because tests and small steps make the fear structurally unfounded, not because you're being heroic.",
-      "Temperance — called \"the most underestimated virtue in IT\" — means not doing unnecessary things: not adopting a new framework because it's interesting, not turning every task into an architecture experiment, and accepting that \"good enough\" is actually good enough.",
-      "The closing line reframes the whole philosophy bluntly: strip away the terminology and a Stoic is just \"an adult developer — one who does not lie to themselves and does not lose focus.\""
+      "The framing: Marcus Aurelius wrote Meditations about keeping your conduct in an unreliable, even hostile environment — which is also where software gets deployed. The one real power you have is over your own system's responses.",
+      "The war story: a bank's e-banking API contract promised status \"OK\" or \"ERROR\"; a new hire on the bank side shipped lowercase \"ok\", and the wallet-side code treated everything non-\"OK\" as failure — customers' bank balances were debited while their transactions showed as failed.",
+      "The fix encodes the dichotomy of control: case-insensitive matching plus a third DISPUTE transaction state for any ambiguous response, with an automated job flagging DISPUTE rows for review — assume dependencies will fail and design so their failure has bounded blast radius.",
+      "On feedback: when analysts argued a two-month wait for a clean payment-methods redesign would lose the market to competitors, the right call was the quick-and-dirty integration — best practices serve the organization's mission, not the other way around.",
+      "A retired service is not a failed service: when regulation killed the cryptocurrency payment method, deleting that service freed resources and the team's knowledge moved elsewhere — components dissolve back into the universe like everything else.",
+      "Future-proofing is a bet, not a virtue: weigh likelihood times stakes against the cost of anticipating; an MVP-stage startup optimizing for scale it doesn't yet have is spending real money solving the wrong problem."
     ]
   },
   {
-    "id": "pragmaticengineer-ai-impact-2026-part2",
-    "title": "AI's Impact on Software Engineers in 2026: Key Trends, Part 2",
-    "source": "The Pragmatic Engineer · Gergely Orosz & Elin Nilsson",
-    "url": "https://newsletter.pragmaticengineer.com/p/ai-impact-on-software-engineers-part-2",
+    "id": "mitchellh-building-large-projects",
+    "title": "My Approach to Building Large Technical Projects",
+    "source": "mitchellh.com · Mitchell Hashimoto",
+    "url": "https://mitchellh.com/writing/building-large-technical-projects",
     "tag": "workflow",
-    "minutes": 10,
-    "summary": "Over 900 engineers told The Pragmatic Engineer how AI tooling is actually changing their day-to-day work in 2026 — and the clearest finding isn't that AI helps or hurts, it's that it amplifies whatever engineering culture already existed. Teams with strong guardrails get stronger; teams without them get an accelerated mess.",
-    "relevance": "Worth reading before your next \"should we mandate more AI usage\" conversation at Ziina — the survey's core finding (AI multiplies existing practices, good or bad) is a direct argument for shoring up test coverage, ADRs, and code review discipline on payments-critical code before leaning harder on AI-generated changes there.",
-    "readGuide": "~10 min for the free portion (sections 1-4; the piece is a paid Substack post and cuts off before sections 5-7 on AI \"addiction\" and where things are headed). Read \"Adopting AI at scale is hard\" and \"Impact on codebase quality\" in full — the direct quotes from engineers are the most useful part; skim the tradeoffs section for the flow-state observations.",
+    "minutes": 8,
+    "summary": "The HashiCorp co-founder on why big projects die: the excitement fades long before the results arrive. His fix, drawn from building the Ghostty terminal emulator, is ordering all work so something demoable exists every single week.",
+    "relevance": "Directly usable for your k8s learning and any side-build: pick the sub-project you can see working soonest, let tests be your first UI, and build throwaway demo scaffolding without guilt — the CLI he discarded is what kept the terminal project alive.",
+    "readGuide": "~8 min, breezy. \"The Starting Line\" and \"Sprint to Demos\" carry the method; \"Packaging it Up\" is a five-point summary worth screenshotting; nothing here is filler.",
     "brief": [
-      "Core finding from 900+ survey responses: AI tooling doesn't change an organization's underlying engineering culture, it amplifies it — teams with strong pre-existing guardrails (testing, automation, documented architectural decisions, quality codebases) get clearer benefits from AI than teams without.",
-      "A workflow that makes one engineer \"10x\" more productive often doesn't transfer to an equally skilled colleague — several respondents describe AI productivity gains as highly idiosyncratic and dependent on finding a workflow that matches personal habits, not a global best practice.",
-      "A concrete, recurring pattern: codebase quality is decreasing due to more \"AI slop\" (duplicated, verbose, poorly abstracted code), degraded code review quality from sheer volume, and more bugs slipping through — one staff engineer flatly called it \"the death of code review.\"",
-      "The maintenance burden of AI-generated code is falling on a shrinking pool of engineers who still understand the system, while \"drive-by\" contributions from people with no context on the codebase are rising — management, according to survey respondents, often doesn't seem to notice or prioritize this.",
-      "Less experienced engineers report a rockier experience with AI tools: they spend more tokens on unproductive use, get less benefit than seniors (\"AI is a fascinating mirror... it doesn't magically convert a junior engineer into a staff engineer\"), and are increasingly not delegated the tasks that used to teach them, because seniors now hand those tasks to AI instead.",
-      "Some companies have already rolled back AI tooling after quality and incident costs became visible — one engineering lead described a \"significant deterioration\" in technical writing and reasoning quality org-wide, plus costly production incidents traced to AI-written or AI-approved code."
+      "The failure mode: projects start with excitement that decays into slog or abandonment. His countermeasure is decomposing work into chunks that each produce visible, tangible progress — \"always give yourself a good demo.\"",
+      "Starting: \"launchable terminal running Neovim\" is a bad first goal — intuitively too big. Filter sub-projects by \"where can I see results soonest\": VT parsing, blank window rendering, launching a child shell.",
+      "Early backend work is invisible, so automated tests become the first UI — watching \"1 test passed\" grow to \"13 tests passed\" is real, motivating progress on a critical component of the larger system.",
+      "Sprint to demos, one or two per week: build good-enough sub-components, not finished ones — in-memory data instead of the real database, hardcoded inputs. Demos also reveal when the feature itself sucks, which perfection-first senior engineers discover far too late.",
+      "His first terminal \"UI\" was a throwaway shell script feeding command output through the VT parser and rendering the grid as ASCII — discarded within days, yet watching vim run through his own parser was the motivation that carried the project.",
+      "Build for yourself: beeline to only the functionality you personally need (his fish config plus Neovim), adopt it as a daily driver, and let the breakage list — arrow keys that did nothing — generate the next round of tasks."
     ]
   }
 ];
 // GROWTH_END
 
-var TOTAL_READ_MINUTES = 48; // refreshed by scheduler
+var TOTAL_READ_MINUTES = 58; // refreshed by scheduler
 
 // ============================================================
 // STOIC QUOTES — rotates by day of year, no refresh needed
